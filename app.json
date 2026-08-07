@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "Zion",
+    "slug": "zion-mobile",
+    "scheme": "zion",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0f1117",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.lunayanet.zion"
+    },
+    "android": {
+      "package": "com.lunayanet.zion",
+      "adaptiveIcon": {
+        "backgroundColor": "#0f1117"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Zion necesita acceso a tus fotos para que puedas enviar imágenes y cambiar tu avatar."
+        }
+      ],
+      "expo-asset",
+      "expo-font",
+      "expo-image",
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0f1117"
+        }
+      ],
+      "expo-video",
+      "./plugins/withDisableForceDark.js"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "77756d09-764d-43a7-87fd-e12c43d66099"
+      }
+    },
+    "owner": "anime1234r"
+  }
+}
