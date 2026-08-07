@@ -7,6 +7,7 @@
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0f1117",
+    "icon": "./assets/icon.png",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.lunayanet.zion"
@@ -14,6 +15,7 @@
     "android": {
       "package": "com.lunayanet.zion",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f1117"
       },
       "permissions": [
@@ -34,7 +36,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0f1117"
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#0f1117",
+          "imageWidth": 220
         }
       ],
       "expo-video",
