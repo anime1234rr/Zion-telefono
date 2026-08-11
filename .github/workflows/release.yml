@@ -31,7 +31,7 @@ jobs:
         id: tag
         shell: bash
         run: |
-          VERSION=$(node -p "require('./app.json').expo.version")
+          VERSION=$(node -p "require('./package.json').version")
           TAG="mobile-v${VERSION}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           git config user.name "github-actions[bot]"
@@ -94,6 +94,16 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Sincronizar versión de app.json con package.json
+        run: |
+          node -e "
+            const fs = require('fs');
+            const pkgVersion = require('./package.json').version;
+            const appJson = JSON.parse(fs.readFileSync('./app.json', 'utf8'));
+            appJson.expo.version = pkgVersion;
+            fs.writeFileSync('./app.json', JSON.stringify(appJson, null, 2) + '\n');
+          "
 
       - name: Generar proyecto nativo Android
         run: npx expo prebuild -p android --no-install
