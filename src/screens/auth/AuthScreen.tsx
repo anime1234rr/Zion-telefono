@@ -62,7 +62,7 @@ export function AuthScreen() {
     <ScreenContainer>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.center}>
           <View style={styles.card}>
