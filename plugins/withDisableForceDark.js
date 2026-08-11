@@ -12,6 +12,7 @@ function withForcedDarkTextTheme(config) {
   return withAndroidStyles(config, (config) => {
     const parent = AndroidConfig.Styles.getAppThemeGroup()
     const items = [
+      ['android:forceDarkAllowed', 'false'],
       ['android:textColorPrimary', '#FFFFFF'],
       ['android:textColorSecondary', '#9CA3AF'],
       ['android:textColorHint', '#9CA3AF'],
