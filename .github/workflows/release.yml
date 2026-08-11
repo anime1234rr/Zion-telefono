@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Reintentar el build/subida del APK aunque el tag ya exista'
+        type: boolean
+        default: false
 
 concurrency:
   group: release
@@ -32,8 +37,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
-            echo "El tag $TAG ya existe en el remoto, no hace falta crearlo ni recompilar."
-            echo "created=false" >> "$GITHUB_OUTPUT"
+            if [ "${{ github.event.inputs.force }}" = "true" ]; then
+              echo "El tag $TAG ya existe en el remoto, pero se fuerza el reintento del build (force=true)."
+              echo "created=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "El tag $TAG ya existe en el remoto, no hace falta crearlo ni recompilar."
+              echo "created=false" >> "$GITHUB_OUTPUT"
+            fi
           else
             git tag "$TAG"
             git push origin "$TAG"
@@ -102,7 +112,7 @@ jobs:
           TAG="${{ needs.tag.outputs.tag }}"
           APK="Zion-${TAG}.apk"
           mv android/app/build/outputs/apk/release/app-release.apk "$APK"
-          gh release upload "$TAG" "$APK"
+          gh release upload "$TAG" "$APK" --clobber
 
       - name: Publicar la release (sacarla de estado borrador)
         shell: bash
