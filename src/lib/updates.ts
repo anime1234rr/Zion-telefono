@@ -52,7 +52,6 @@ export async function checkForOtaUpdate(): Promise<void> {
       { text: 'Más tarde', style: 'cancel' },
     ])
   } catch {
-    // Sin conexión o falla el chequeo: la app sigue con la versión actual, sin interrumpir al usuario.
   }
 }
 
@@ -61,7 +60,12 @@ async function fetchLatestMobileRelease(): Promise<GithubRelease | null> {
   if (!response.ok) return null
 
   const releases = (await response.json()) as GithubRelease[]
-  return releases.find((release) => release.tag_name.startsWith(RELEASE_TAG_PREFIX)) ?? null
+  return releases
+    .filter((release) => release.tag_name.startsWith(RELEASE_TAG_PREFIX))
+    .reduce<GithubRelease | null>(
+      (latest, release) => (!latest || isNewer(release.tag_name, latest.tag_name) ? release : latest),
+      null
+    )
 }
 
 export async function checkForNativeUpdate(): Promise<void> {
@@ -86,7 +90,6 @@ export async function checkForNativeUpdate(): Promise<void> {
       ],
     )
   } catch {
-    // Sin conexión o falla el chequeo: no molestamos al usuario, se reintenta en el próximo inicio.
   }
 }
 
@@ -98,7 +101,7 @@ async function downloadAndInstallApk(url: string): Promise<void> {
 
     await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
       data: contentUri,
-      flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+      flags: 1,
       type: 'application/vnd.android.package-archive',
     })
   } catch {

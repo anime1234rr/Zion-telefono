@@ -165,7 +165,7 @@ export function DMChatScreen() {
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 19}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 21}
       >
         <MessageList
           messages={messages}
