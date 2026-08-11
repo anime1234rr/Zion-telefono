@@ -217,7 +217,7 @@ export function ChannelChatScreen() {
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 15}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 19}
       >
         <MessageList
           messages={messages}
