@@ -67,6 +67,7 @@ jobs:
     needs: tag
     if: needs.tag.outputs.created == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -97,9 +98,18 @@ jobs:
       - name: Generar proyecto nativo Android
         run: npx expo prebuild -p android --no-install
 
+      - name: Configurar memoria de Gradle/Kotlin
+        run: |
+          mkdir -p ~/.gradle
+          cat >> ~/.gradle/gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m
+          org.gradle.daemon=false
+          kotlin.daemon.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=768m
+          EOF
+
       - name: Compilar APK release
         working-directory: android
-        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a --no-daemon
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
