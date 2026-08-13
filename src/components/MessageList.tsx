@@ -10,12 +10,14 @@ export function MessageList({
   messages,
   onToggleReaction,
   onLongPressMessage,
+  onPressAuthor,
   highlightMessageId,
   customEmojis,
 }: {
   messages: ChatMessage[]
   onToggleReaction?: (messageId: string, emoji: string) => void
   onLongPressMessage?: (message: ChatMessage) => void
+  onPressAuthor?: (userId: string) => void
   highlightMessageId?: string | null
   customEmojis?: Map<string, string>
 }) {
@@ -49,6 +51,7 @@ export function MessageList({
           group={item}
           onToggleReaction={onToggleReaction}
           onLongPressMessage={onLongPressMessage}
+          onPressAuthor={onPressAuthor}
           highlightMessageId={highlightMessageId}
           customEmojis={customEmojis}
         />

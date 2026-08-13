@@ -10,6 +10,7 @@ import { Avatar } from '@/components/Avatar'
 import { MessageList } from '@/components/MessageList'
 import { MessageComposer } from '@/components/MessageComposer'
 import { PromptModal } from '@/components/PromptModal'
+import { UserProfileModal } from '@/components/UserProfileModal'
 import { useAuth } from '@/hooks/use-auth'
 import {
   alternarReaccionMensajeDirecto,
@@ -41,6 +42,7 @@ export function DMChatScreen() {
   const [replyingTo, setReplyingTo] = useState<ReplyPreview | null>(null)
   const [sending, setSending] = useState(false)
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null)
+  const [profileUserId, setProfileUserId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!userId) return
@@ -148,7 +150,10 @@ export function DMChatScreen() {
           <Ionicons name="chevron-back" size={22} color={colors.foreground} />
         </Pressable>
         {conversation ? (
-          <>
+          <Pressable
+            style={styles.headerUser}
+            onPress={() => setProfileUserId(conversation.otherUser.id)}
+          >
             <Avatar
               name={conversation.otherUser.name}
               url={conversation.otherUser.avatarUrl}
@@ -158,7 +163,7 @@ export function DMChatScreen() {
             <Text style={styles.title} numberOfLines={1}>
               {conversation.otherUser.name}
             </Text>
-          </>
+          </Pressable>
         ) : null}
       </View>
 
@@ -171,6 +176,7 @@ export function DMChatScreen() {
           messages={messages}
           onToggleReaction={alternarReaccionMensajeDirecto}
           onLongPressMessage={handleLongPressMessage}
+          onPressAuthor={setProfileUserId}
         />
         <MessageComposer
           placeholder={conversation ? `Mensaje a ${conversation.otherUser.name}` : 'Mensaje'}
@@ -192,6 +198,13 @@ export function DMChatScreen() {
           setEditingMessage(null)
         }}
       />
+
+      <UserProfileModal
+        userId={profileUserId}
+        currentUserId={userId ?? ''}
+        visible={profileUserId !== null}
+        onClose={() => setProfileUserId(null)}
+      />
     </ScreenContainer>
   )
 }
@@ -208,6 +221,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  headerUser: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   title: {
     color: colors.foreground,

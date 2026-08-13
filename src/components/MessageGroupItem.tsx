@@ -110,21 +110,27 @@ export function MessageGroupItem({
   group,
   onToggleReaction,
   onLongPressMessage,
+  onPressAuthor,
   highlightMessageId,
   customEmojis = EMPTY_EMOJIS,
 }: {
   group: MessageGroup
   onToggleReaction?: (messageId: string, emoji: string) => void
   onLongPressMessage?: (message: ChatMessage) => void
+  onPressAuthor?: (userId: string) => void
   highlightMessageId?: string | null
   customEmojis?: Map<string, string>
 }) {
   return (
     <View style={styles.group}>
-      <Avatar name={group.author.name} url={group.author.avatarUrl} size={36} />
+      <Pressable onPress={() => onPressAuthor?.(group.author.id)} disabled={!onPressAuthor}>
+        <Avatar name={group.author.name} url={group.author.avatarUrl} size={36} />
+      </Pressable>
       <View style={styles.groupBody}>
         <View style={styles.groupHeader}>
-          <Text style={styles.authorName}>{group.author.name}</Text>
+          <Pressable onPress={() => onPressAuthor?.(group.author.id)} disabled={!onPressAuthor}>
+            <Text style={styles.authorName}>{group.author.name}</Text>
+          </Pressable>
           <Text style={styles.timestamp}>{group.timestamp}</Text>
         </View>
         {group.items.map((message) => (

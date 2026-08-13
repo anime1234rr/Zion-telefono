@@ -16,15 +16,19 @@ const statusLabel: Record<Friend['status'], string> = {
 export function FriendRow({
   friend,
   onPress,
+  onPressAvatar,
   rightSlot,
 }: {
   friend: Friend
   onPress?: () => void
+  onPressAvatar?: () => void
   rightSlot?: ReactNode
 }) {
   return (
     <Pressable style={styles.row} onPress={onPress}>
-      <Avatar name={friend.user.name} url={friend.user.avatarUrl} status={friend.user.status} size={40} />
+      <Pressable onPress={onPressAvatar} hitSlop={8} disabled={!onPressAvatar}>
+        <Avatar name={friend.user.name} url={friend.user.avatarUrl} status={friend.user.status} size={40} />
+      </Pressable>
       <View style={styles.info}>
         <Text style={styles.name}>{friend.user.name}</Text>
         <Text style={styles.status}>{statusLabel[friend.status]}</Text>

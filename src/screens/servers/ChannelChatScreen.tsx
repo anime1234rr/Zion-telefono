@@ -12,6 +12,7 @@ import { PromptModal } from '@/components/PromptModal'
 import { PinnedMessagesModal } from '@/components/PinnedMessagesModal'
 import { SearchModal } from '@/components/SearchModal'
 import { NotificationBellButton } from '@/components/NotificationBellButton'
+import { UserProfileModal } from '@/components/UserProfileModal'
 import { useAuth } from '@/hooks/use-auth'
 import { useServerExpresiones } from '@/hooks/use-server-expresiones'
 import {
@@ -24,6 +25,7 @@ import {
 } from '@/lib/messages'
 import { subirArchivoChat } from '@/lib/storage'
 import { listarServidores } from '@/lib/servers'
+import { obtenerOCrearConversacion } from '@/lib/dms'
 import type { ChatMessage, ReplyPreview, ServerItem } from '@/lib/types'
 import type { RootStackParamList } from '@/navigation/types'
 import { colors } from '@/theme/colors'
@@ -45,6 +47,7 @@ export function ChannelChatScreen() {
   const [server, setServer] = useState<ServerItem | null>(null)
   const [pinnedOpen, setPinnedOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [profileUserId, setProfileUserId] = useState<string | null>(null)
   const [highlightMessageId, setHighlightMessageId] = useState<string | null>(
     route.params.highlightMessageId ?? null
   )
@@ -91,6 +94,11 @@ export function ChannelChatScreen() {
 
     return unsubscribe
   }, [channelId])
+
+  async function handleMessageUser(targetUserId: string) {
+    const conversationId = await obtenerOCrearConversacion(targetUserId)
+    navigation.navigate('DMChat', { conversationId })
+  }
 
   const handleSubmit = useCallback(
     async (text: string) => {
@@ -223,6 +231,7 @@ export function ChannelChatScreen() {
           messages={messages}
           onToggleReaction={alternarReaccionMensaje}
           onLongPressMessage={handleLongPressMessage}
+          onPressAuthor={setProfileUserId}
           highlightMessageId={highlightMessageId}
           customEmojis={customEmojis}
         />
@@ -261,6 +270,14 @@ export function ChannelChatScreen() {
         serverId={serverId}
         channelId={channelId}
         onJumpToMessage={handleJumpToChannelMessage}
+      />
+
+      <UserProfileModal
+        userId={profileUserId}
+        currentUserId={userId ?? ''}
+        visible={profileUserId !== null}
+        onClose={() => setProfileUserId(null)}
+        onMessageUser={handleMessageUser}
       />
     </ScreenContainer>
   )

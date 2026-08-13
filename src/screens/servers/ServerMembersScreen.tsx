@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-n
 
 import { ScreenContainer } from '@/components/ScreenContainer'
 import { Avatar } from '@/components/Avatar'
+import { UserProfileModal } from '@/components/UserProfileModal'
 import { useAuth } from '@/hooks/use-auth'
 import { displayMemberName, listarMiembros, suscribirseAMiembrosDeServidor, type ServerMember } from '@/lib/members'
 import { obtenerOCrearConversacion } from '@/lib/dms'
@@ -22,6 +23,7 @@ export function ServerMembersScreen() {
   const { serverId } = route.params
 
   const [members, setMembers] = useState<ServerMember[]>([])
+  const [profileUserId, setProfileUserId] = useState<string | null>(null)
 
   const cargar = useCallback(() => {
     listarMiembros(serverId)
@@ -58,10 +60,7 @@ export function ServerMembersScreen() {
         data={members}
         keyExtractor={(item) => item.membershipId}
         renderItem={({ item }) => (
-          <Pressable
-            style={styles.row}
-            onPress={() => user && item.user.id !== user.id && handleMessage(item.user.id)}
-          >
+          <Pressable style={styles.row} onPress={() => setProfileUserId(item.user.id)}>
             <Avatar name={item.user.name} url={item.user.avatarUrl} status={item.user.status} size={40} />
             <View style={styles.info}>
               <Text style={[styles.name, item.role?.color ? { color: item.role.color } : null]}>
@@ -71,6 +70,14 @@ export function ServerMembersScreen() {
             </View>
           </Pressable>
         )}
+      />
+
+      <UserProfileModal
+        userId={profileUserId}
+        currentUserId={user?.id ?? ''}
+        visible={profileUserId !== null}
+        onClose={() => setProfileUserId(null)}
+        onMessageUser={handleMessage}
       />
     </ScreenContainer>
   )

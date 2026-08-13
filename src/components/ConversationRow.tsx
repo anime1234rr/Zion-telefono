@@ -8,18 +8,22 @@ import type { DMConversation } from '@/lib/types'
 export function ConversationRow({
   conversation,
   onPress,
+  onPressAvatar,
 }: {
   conversation: DMConversation
   onPress: () => void
+  onPressAvatar?: () => void
 }) {
   return (
     <Pressable style={styles.row} onPress={onPress}>
-      <Avatar
-        name={conversation.otherUser.name}
-        url={conversation.otherUser.avatarUrl}
-        status={conversation.otherUser.status}
-        size={44}
-      />
+      <Pressable onPress={onPressAvatar} hitSlop={8} disabled={!onPressAvatar}>
+        <Avatar
+          name={conversation.otherUser.name}
+          url={conversation.otherUser.avatarUrl}
+          status={conversation.otherUser.status}
+          size={44}
+        />
+      </Pressable>
       <View style={styles.info}>
         <Text style={styles.name}>{conversation.otherUser.name}</Text>
         <Text style={styles.preview} numberOfLines={1}>

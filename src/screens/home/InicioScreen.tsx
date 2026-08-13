@@ -8,8 +8,9 @@ import { ScreenContainer } from '@/components/ScreenContainer'
 import { ConversationRow } from '@/components/ConversationRow'
 import { EmptyState } from '@/components/EmptyState'
 import { NotificationBellButton } from '@/components/NotificationBellButton'
+import { UserProfileModal } from '@/components/UserProfileModal'
 import { useAuth } from '@/hooks/use-auth'
-import { listarConversaciones, suscribirseAConversaciones } from '@/lib/dms'
+import { listarConversaciones, obtenerOCrearConversacion, suscribirseAConversaciones } from '@/lib/dms'
 import type { DMConversation } from '@/lib/types'
 import type { RootStackParamList } from '@/navigation/types'
 import { colors } from '@/theme/colors'
@@ -20,6 +21,7 @@ export function InicioScreen() {
   const userId = user?.id ?? null
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
   const [conversations, setConversations] = useState<DMConversation[]>([])
+  const [profileUserId, setProfileUserId] = useState<string | null>(null)
 
   const cargar = useCallback(() => {
     if (!userId) return
@@ -38,6 +40,11 @@ export function InicioScreen() {
     if (!userId) return
     return suscribirseAConversaciones(userId, cargar)
   }, [userId, cargar])
+
+  async function handleMessageUser(targetUserId: string) {
+    const conversationId = await obtenerOCrearConversacion(targetUserId)
+    navigation.navigate('DMChat', { conversationId })
+  }
 
   return (
     <ScreenContainer>
@@ -75,10 +82,19 @@ export function InicioScreen() {
             <ConversationRow
               conversation={item}
               onPress={() => navigation.navigate('DMChat', { conversationId: item.id })}
+              onPressAvatar={() => setProfileUserId(item.otherUser.id)}
             />
           )}
         />
       )}
+
+      <UserProfileModal
+        userId={profileUserId}
+        currentUserId={userId ?? ''}
+        visible={profileUserId !== null}
+        onClose={() => setProfileUserId(null)}
+        onMessageUser={handleMessageUser}
+      />
     </ScreenContainer>
   )
 }

@@ -7,6 +7,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { ScreenContainer } from '@/components/ScreenContainer'
 import { FriendRow } from '@/components/FriendRow'
 import { EmptyState } from '@/components/EmptyState'
+import { UserProfileModal } from '@/components/UserProfileModal'
 import { useAuth } from '@/hooks/use-auth'
 import {
   aceptarSolicitudAmistad,
@@ -31,6 +32,7 @@ export function FriendsScreen() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<ChatUser[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [profileUserId, setProfileUserId] = useState<string | null>(null)
 
   const cargar = useCallback(() => {
     if (!userId) return
@@ -136,6 +138,7 @@ export function FriendsScreen() {
           <FriendRow
             friend={item}
             onPress={item.status === 'aceptada' ? () => handleOpenConversation(item.user.id) : undefined}
+            onPressAvatar={() => setProfileUserId(item.user.id)}
             rightSlot={
               item.status === 'pendiente_recibida' ? (
                 <View style={styles.actions}>
@@ -156,6 +159,14 @@ export function FriendsScreen() {
             }
           />
         )}
+      />
+
+      <UserProfileModal
+        userId={profileUserId}
+        currentUserId={userId ?? ''}
+        visible={profileUserId !== null}
+        onClose={() => setProfileUserId(null)}
+        onMessageUser={handleOpenConversation}
       />
     </ScreenContainer>
   )
