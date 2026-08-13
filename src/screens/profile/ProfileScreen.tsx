@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +16,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { ScreenContainer } from '@/components/ScreenContainer'
 import { Avatar } from '@/components/Avatar'
 import { useAuth } from '@/hooks/use-auth'
+import { showAppAlert } from '@/hooks/use-app-alert'
 import { actualizarAvatar, actualizarPerfil, obtenerPerfilEditable, type EditableProfile } from '@/lib/profiles'
 import { subirAvatar } from '@/lib/storage'
 import { getErrorMessage } from '@/lib/utils'
@@ -63,7 +63,7 @@ export function ProfileScreen() {
       const updated = await actualizarPerfil(user.id, { nombreCompleto, biografia })
       setProfile(updated)
     } catch (err) {
-      Alert.alert('Error', getErrorMessage(err))
+      showAppAlert('Error', getErrorMessage(err))
     } finally {
       setSaving(false)
     }
@@ -75,7 +75,7 @@ export function ProfileScreen() {
       const updated = await actualizarPerfil(user.id, { status })
       setProfile(updated)
     } catch (err) {
-      Alert.alert('Error', getErrorMessage(err))
+      showAppAlert('Error', getErrorMessage(err))
     }
   }
 
@@ -101,14 +101,14 @@ export function ProfileScreen() {
       await actualizarAvatar(user.id, url)
       setProfile((prev) => (prev ? { ...prev, avatarUrl: url } : prev))
     } catch (err) {
-      Alert.alert('Error', getErrorMessage(err))
+      showAppAlert('Error', getErrorMessage(err))
     } finally {
       setUploadingAvatar(false)
     }
   }
 
   function handleSignOut() {
-    Alert.alert('Cerrar sesión', '¿Seguro que querés cerrar sesión?', [
+    showAppAlert('Cerrar sesión', '¿Seguro que querés cerrar sesión?', [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Cerrar sesión', style: 'destructive', onPress: () => signOut() },
     ])

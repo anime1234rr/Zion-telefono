@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import { useNavigation, useRoute } from '@react-navigation/native'
@@ -9,6 +9,8 @@ import { ScreenContainer } from '@/components/ScreenContainer'
 import { MessageList } from '@/components/MessageList'
 import { MessageComposer } from '@/components/MessageComposer'
 import { PromptModal } from '@/components/PromptModal'
+import { MessageActionsModal, type MessageActionItem } from '@/components/MessageActionsModal'
+import { EmojiPickerModal } from '@/components/EmojiPickerModal'
 import { PinnedMessagesModal } from '@/components/PinnedMessagesModal'
 import { SearchModal } from '@/components/SearchModal'
 import { NotificationBellButton } from '@/components/NotificationBellButton'
@@ -48,6 +50,8 @@ export function ChannelChatScreen() {
   const [pinnedOpen, setPinnedOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [profileUserId, setProfileUserId] = useState<string | null>(null)
+  const [actionsMessage, setActionsMessage] = useState<ChatMessage | null>(null)
+  const [reactingMessage, setReactingMessage] = useState<ChatMessage | null>(null)
   const [highlightMessageId, setHighlightMessageId] = useState<string | null>(
     route.params.highlightMessageId ?? null
   )
@@ -148,10 +152,12 @@ export function ChannelChatScreen() {
     }
   }
 
-  function handleLongPressMessage(message: ChatMessage) {
-    const options: { text: string; onPress?: () => void; style?: 'destructive' | 'cancel' }[] = [
+  function buildMessageActions(message: ChatMessage): MessageActionItem[] {
+    const actions: MessageActionItem[] = [
       {
-        text: 'Responder',
+        key: 'reply',
+        label: 'Responder',
+        icon: 'arrow-undo-outline',
         onPress: () =>
           setReplyingTo({
             id: message.id,
@@ -159,21 +165,33 @@ export function ChannelChatScreen() {
             preview: message.content ?? (message.code ? 'Código' : 'Adjunto'),
           }),
       },
-      { text: 'Reaccionar con 👍', onPress: () => alternarReaccionMensaje(message.id, '👍') },
+      {
+        key: 'react',
+        label: 'Reaccionar',
+        icon: 'happy-outline',
+        onPress: () => setReactingMessage(message),
+      },
     ]
     if (user && message.author.id === user.id) {
-      options.push({
-        text: 'Editar',
+      actions.push({
+        key: 'edit',
+        label: 'Editar',
+        icon: 'pencil-outline',
         onPress: () => setEditingMessage(message),
       })
-      options.push({
-        text: 'Eliminar',
-        style: 'destructive',
+      actions.push({
+        key: 'delete',
+        label: 'Eliminar',
+        icon: 'trash-outline',
+        destructive: true,
         onPress: () => eliminarMensaje(message.id).catch((err) => console.error(err)),
       })
     }
-    options.push({ text: 'Cancelar', style: 'cancel' })
-    Alert.alert('Mensaje', undefined, options)
+    return actions
+  }
+
+  function handleLongPressMessage(message: ChatMessage) {
+    setActionsMessage(message)
   }
 
   function handleJumpToMessage(messageId: string) {
@@ -278,6 +296,20 @@ export function ChannelChatScreen() {
         visible={profileUserId !== null}
         onClose={() => setProfileUserId(null)}
         onMessageUser={handleMessageUser}
+      />
+
+      <MessageActionsModal
+        visible={actionsMessage !== null}
+        actions={actionsMessage ? buildMessageActions(actionsMessage) : []}
+        onClose={() => setActionsMessage(null)}
+      />
+
+      <EmojiPickerModal
+        visible={reactingMessage !== null}
+        onClose={() => setReactingMessage(null)}
+        onSelect={(emoji) => {
+          if (reactingMessage) alternarReaccionMensaje(reactingMessage.id, emoji)
+        }}
       />
     </ScreenContainer>
   )

@@ -15,10 +15,10 @@ import { ServerMembersScreen } from '@/screens/servers/ServerMembersScreen'
 import { ServerSettingsScreen } from '@/screens/servers/ServerSettingsScreen'
 import { ProfileScreen } from '@/screens/profile/ProfileScreen'
 import { VoiceChannelPlaceholderScreen } from '@/screens/placeholders/VoiceChannelPlaceholderScreen'
-import { WebhooksPlaceholderScreen } from '@/screens/placeholders/WebhooksPlaceholderScreen'
-import { RolesPlaceholderScreen } from '@/screens/placeholders/RolesPlaceholderScreen'
-import { AuditLogPlaceholderScreen } from '@/screens/placeholders/AuditLogPlaceholderScreen'
-import { ExpresionesPlaceholderScreen } from '@/screens/placeholders/ExpresionesPlaceholderScreen'
+import { WebhooksScreen } from '@/screens/servers/WebhooksScreen'
+import { RolesScreen } from '@/screens/servers/RolesScreen'
+import { AuditLogScreen } from '@/screens/servers/AuditLogScreen'
+import { ExpresionesScreen } from '@/screens/servers/ExpresionesScreen'
 import type { RootStackParamList } from '@/navigation/types'
 import { colors } from '@/theme/colors'
 
@@ -57,10 +57,10 @@ export function RootNavigator() {
             options={{ presentation: 'modal' }}
           />
           <Stack.Screen name="VoiceChannelPlaceholder" component={VoiceChannelPlaceholderScreen} />
-          <Stack.Screen name="WebhooksPlaceholder" component={WebhooksPlaceholderScreen} />
-          <Stack.Screen name="RolesPlaceholder" component={RolesPlaceholderScreen} />
-          <Stack.Screen name="AuditLogPlaceholder" component={AuditLogPlaceholderScreen} />
-          <Stack.Screen name="ExpresionesPlaceholder" component={ExpresionesPlaceholderScreen} />
+          <Stack.Screen name="Webhooks" component={WebhooksScreen} />
+          <Stack.Screen name="Roles" component={RolesScreen} />
+          <Stack.Screen name="AuditLog" component={AuditLogScreen} />
+          <Stack.Screen name="Expresiones" component={ExpresionesScreen} />
         </>
       )}
     </Stack.Navigator>

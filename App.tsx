@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar'
 
 import { AuthProvider } from '@/lib/auth-context'
 import { RootNavigator } from '@/navigation/RootNavigator'
+import { AppAlertHost } from '@/components/AppAlertHost'
 import { colors } from '@/theme/colors'
 import { checkForUpdates } from '@/lib/updates'
 
@@ -45,6 +46,7 @@ export default function App() {
           <NavigationContainer theme={navigationTheme}>
             <StatusBar style="light" />
             <RootNavigator />
+            <AppAlertHost />
           </NavigationContainer>
         </AuthProvider>
       </SafeAreaProvider>

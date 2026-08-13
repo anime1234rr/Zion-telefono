@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import { useNavigation, useRoute } from '@react-navigation/native'
@@ -10,6 +10,8 @@ import { Avatar } from '@/components/Avatar'
 import { MessageList } from '@/components/MessageList'
 import { MessageComposer } from '@/components/MessageComposer'
 import { PromptModal } from '@/components/PromptModal'
+import { MessageActionsModal, type MessageActionItem } from '@/components/MessageActionsModal'
+import { EmojiPickerModal } from '@/components/EmojiPickerModal'
 import { UserProfileModal } from '@/components/UserProfileModal'
 import { useAuth } from '@/hooks/use-auth'
 import {
@@ -43,6 +45,8 @@ export function DMChatScreen() {
   const [sending, setSending] = useState(false)
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null)
   const [profileUserId, setProfileUserId] = useState<string | null>(null)
+  const [actionsMessage, setActionsMessage] = useState<ChatMessage | null>(null)
+  const [reactingMessage, setReactingMessage] = useState<ChatMessage | null>(null)
 
   useEffect(() => {
     if (!userId) return
@@ -118,10 +122,12 @@ export function DMChatScreen() {
     }
   }
 
-  function handleLongPressMessage(message: ChatMessage) {
-    const options: { text: string; onPress?: () => void; style?: 'destructive' | 'cancel' }[] = [
+  function buildMessageActions(message: ChatMessage): MessageActionItem[] {
+    const actions: MessageActionItem[] = [
       {
-        text: 'Responder',
+        key: 'reply',
+        label: 'Responder',
+        icon: 'arrow-undo-outline',
         onPress: () =>
           setReplyingTo({
             id: message.id,
@@ -129,18 +135,33 @@ export function DMChatScreen() {
             preview: message.content ?? (message.code ? 'Código' : 'Adjunto'),
           }),
       },
-      { text: 'Reaccionar con 👍', onPress: () => alternarReaccionMensajeDirecto(message.id, '👍') },
+      {
+        key: 'react',
+        label: 'Reaccionar',
+        icon: 'happy-outline',
+        onPress: () => setReactingMessage(message),
+      },
     ]
     if (user && message.author.id === user.id) {
-      options.push({ text: 'Editar', onPress: () => setEditingMessage(message) })
-      options.push({
-        text: 'Eliminar',
-        style: 'destructive',
+      actions.push({
+        key: 'edit',
+        label: 'Editar',
+        icon: 'pencil-outline',
+        onPress: () => setEditingMessage(message),
+      })
+      actions.push({
+        key: 'delete',
+        label: 'Eliminar',
+        icon: 'trash-outline',
+        destructive: true,
         onPress: () => eliminarMensajeDirecto(message.id).catch((err) => console.error(err)),
       })
     }
-    options.push({ text: 'Cancelar', style: 'cancel' })
-    Alert.alert('Mensaje', undefined, options)
+    return actions
+  }
+
+  function handleLongPressMessage(message: ChatMessage) {
+    setActionsMessage(message)
   }
 
   return (
@@ -204,6 +225,20 @@ export function DMChatScreen() {
         currentUserId={userId ?? ''}
         visible={profileUserId !== null}
         onClose={() => setProfileUserId(null)}
+      />
+
+      <MessageActionsModal
+        visible={actionsMessage !== null}
+        actions={actionsMessage ? buildMessageActions(actionsMessage) : []}
+        onClose={() => setActionsMessage(null)}
+      />
+
+      <EmojiPickerModal
+        visible={reactingMessage !== null}
+        onClose={() => setReactingMessage(null)}
+        onSelect={(emoji) => {
+          if (reactingMessage) alternarReaccionMensajeDirecto(reactingMessage.id, emoji)
+        }}
       />
     </ScreenContainer>
   )

@@ -1,10 +1,12 @@
-import { Alert, Linking, Platform } from 'react-native'
+import { Linking, Platform } from 'react-native'
 import * as Updates from 'expo-updates'
 import * as Application from 'expo-application'
 import * as FileSystem from 'expo-file-system/legacy'
 import * as IntentLauncher from 'expo-intent-launcher'
 
 import Constants from 'expo-constants'
+
+import { showAppAlert } from '@/hooks/use-app-alert'
 
 const GITHUB_REPO = (Constants.expoConfig?.extra?.githubRepo as string) ?? 'anime1234rr/zion'
 const RELEASE_TAG_PREFIX = (Constants.expoConfig?.extra?.mobileReleaseTagPrefix as string) ?? 'mobile-v'
@@ -47,9 +49,9 @@ export async function checkForOtaUpdate(): Promise<void> {
 
     await Updates.fetchUpdateAsync()
 
-    Alert.alert('Actualización disponible', 'Zion se va a reiniciar para aplicar los últimos cambios.', [
-      { text: 'Ahora', onPress: () => Updates.reloadAsync() },
+    showAppAlert('Actualización disponible', 'Zion se va a reiniciar para aplicar los últimos cambios.', [
       { text: 'Más tarde', style: 'cancel' },
+      { text: 'Ahora', onPress: () => Updates.reloadAsync() },
     ])
   } catch {
   }
@@ -81,12 +83,12 @@ export async function checkForNativeUpdate(): Promise<void> {
     const apkAsset = release.assets.find((asset) => asset.name.endsWith('.apk'))
     if (!apkAsset) return
 
-    Alert.alert(
+    showAppAlert(
       'Nueva versión de Zion',
       `Hay una versión nueva (${release.tag_name}) con cambios que requieren reinstalar la app. ¿Descargarla ahora?`,
       [
-        { text: 'Descargar', onPress: () => downloadAndInstallApk(apkAsset.browser_download_url) },
         { text: 'Más tarde', style: 'cancel' },
+        { text: 'Descargar', onPress: () => downloadAndInstallApk(apkAsset.browser_download_url) },
       ],
     )
   } catch {
@@ -105,9 +107,9 @@ async function downloadAndInstallApk(url: string): Promise<void> {
       type: 'application/vnd.android.package-archive',
     })
   } catch {
-    Alert.alert('No se pudo descargar la actualización', 'Probá de nuevo más tarde, o descargala manualmente.', [
-      { text: 'Abrir GitHub', onPress: () => Linking.openURL(`https://github.com/${GITHUB_REPO}/releases`) },
+    showAppAlert('No se pudo descargar la actualización', 'Probá de nuevo más tarde, o descargala manualmente.', [
       { text: 'Cerrar', style: 'cancel' },
+      { text: 'Abrir GitHub', onPress: () => Linking.openURL(`https://github.com/${GITHUB_REPO}/releases`) },
     ])
   }
 }

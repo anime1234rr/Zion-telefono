@@ -63,6 +63,25 @@ export function subirBannerServidor(userId: string, file: PickedFile) {
   return subirImagen('iconos_servidores', userId, file, BANNER_MAX_SIZE_BYTES)
 }
 
+const EXPRESION_MAX_SIZE_BYTES = 2 * 1024 * 1024
+
+export async function subirExpresionServidor(servidorId: string, file: PickedFile): Promise<string> {
+  assertImagenValida(file, EXPRESION_MAX_SIZE_BYTES)
+
+  const extension = file.name.split('.').pop() ?? 'png'
+  const path = `expresiones/${servidorId}/${uniqueId()}.${extension}`
+  const buffer = await leerComoArrayBuffer(file.uri)
+
+  const { error } = await supabase.storage.from('iconos_servidores').upload(path, buffer, {
+    cacheControl: '3600',
+    upsert: false,
+    contentType: file.type,
+  })
+  if (error) throw error
+
+  return supabase.storage.from('iconos_servidores').getPublicUrl(path).data.publicUrl
+}
+
 const CHAT_MAX_SIZE_BYTES = 50 * 1024 * 1024
 const CHAT_MIME_A_TIPO: Record<string, 'imagen' | 'video'> = {
   'image/jpeg': 'imagen',

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native'
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack'
@@ -7,6 +7,7 @@ import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-n
 import { ScreenContainer } from '@/components/ScreenContainer'
 import { PromptModal } from '@/components/PromptModal'
 import { useAuth } from '@/hooks/use-auth'
+import { showAppAlert } from '@/hooks/use-app-alert'
 import { actualizarServidor, eliminarServidor, listarServidores, regenerarInvitacion } from '@/lib/servers'
 import { getErrorMessage } from '@/lib/utils'
 import type { ServerItem } from '@/lib/types'
@@ -60,12 +61,12 @@ export function ServerSettingsScreen() {
       const updated = await regenerarInvitacion(serverId)
       setServer(updated)
     } catch (err) {
-      Alert.alert('Error', getErrorMessage(err))
+      showAppAlert('Error', getErrorMessage(err))
     }
   }
 
   function handleDeleteServer() {
-    Alert.alert('Eliminar servidor', '¿Seguro que querés eliminar este servidor? Esta acción no se puede deshacer.', [
+    showAppAlert('Eliminar servidor', '¿Seguro que querés eliminar este servidor? Esta acción no se puede deshacer.', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Eliminar',
@@ -75,7 +76,7 @@ export function ServerSettingsScreen() {
             await eliminarServidor(serverId)
             navigation.navigate('Main')
           } catch (err) {
-            Alert.alert('Error', getErrorMessage(err))
+            showAppAlert('Error', getErrorMessage(err))
           }
         },
       },
@@ -104,26 +105,30 @@ export function ServerSettingsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>PRÓXIMAMENTE</Text>
+          <Text style={styles.sectionTitle}>COMUNIDAD</Text>
           <SettingsRow
-            icon="shield-outline"
-            label="Roles y permisos"
-            onPress={() => navigation.navigate('RolesPlaceholder', { serverId })}
+            icon="happy-outline"
+            label="Expresiones"
+            onPress={() => navigation.navigate('Expresiones', { serverId })}
           />
           <SettingsRow
             icon="link-outline"
             label="Webhooks"
-            onPress={() => navigation.navigate('WebhooksPlaceholder', { serverId })}
+            onPress={() => navigation.navigate('Webhooks', { serverId })}
           />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>MODERACIÓN</Text>
           <SettingsRow
-            icon="happy-outline"
-            label="Expresiones"
-            onPress={() => navigation.navigate('ExpresionesPlaceholder', { serverId })}
+            icon="shield-outline"
+            label="Roles y permisos"
+            onPress={() => navigation.navigate('Roles', { serverId })}
           />
           <SettingsRow
             icon="document-text-outline"
             label="Registro de auditoría"
-            onPress={() => navigation.navigate('AuditLogPlaceholder', { serverId })}
+            onPress={() => navigation.navigate('AuditLog', { serverId })}
           />
         </View>
 
@@ -146,7 +151,7 @@ export function ServerSettingsScreen() {
             const updated = await actualizarServidor(serverId, { nombre: value })
             setServer(updated)
           } catch (err) {
-            Alert.alert('Error', getErrorMessage(err))
+            showAppAlert('Error', getErrorMessage(err))
           }
         }}
       />

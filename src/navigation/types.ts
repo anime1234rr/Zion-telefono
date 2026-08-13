@@ -16,10 +16,10 @@ export type RootStackParamList = {
   ServerSettings: { serverId: string }
   CreateOrJoinServer: undefined
   VoiceChannelPlaceholder: { channelId: string; channelName: string }
-  WebhooksPlaceholder: { serverId: string }
-  RolesPlaceholder: { serverId: string }
-  AuditLogPlaceholder: { serverId: string }
-  ExpresionesPlaceholder: { serverId: string }
+  Webhooks: { serverId: string }
+  Roles: { serverId: string }
+  AuditLog: { serverId: string }
+  Expresiones: { serverId: string }
 }
 
 declare global {
