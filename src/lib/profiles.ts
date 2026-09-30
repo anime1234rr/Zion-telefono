@@ -21,7 +21,6 @@ export interface PerfilRow {
 interface PreferenciasSeguridadRow {
   notificar_cambio_contrasena: boolean
   notificar_cambio_email: boolean
-  notificar_cambio_telefono: boolean
   notificar_metodo_login_vinculado: boolean
   notificar_metodo_login_eliminado: boolean
   notificar_mfa_agregado: boolean
@@ -31,7 +30,6 @@ interface PreferenciasSeguridadRow {
 export interface SecurityNotificationPrefs {
   cambioContrasena: boolean
   cambioEmail: boolean
-  cambioTelefono: boolean
   metodoLoginVinculado: boolean
   metodoLoginEliminado: boolean
   mfaAgregado: boolean
@@ -41,7 +39,6 @@ export interface SecurityNotificationPrefs {
 const COLUMNA_POR_CLAVE: Record<keyof SecurityNotificationPrefs, string> = {
   cambioContrasena: 'notificar_cambio_contrasena',
   cambioEmail: 'notificar_cambio_email',
-  cambioTelefono: 'notificar_cambio_telefono',
   metodoLoginVinculado: 'notificar_metodo_login_vinculado',
   metodoLoginEliminado: 'notificar_metodo_login_eliminado',
   mfaAgregado: 'notificar_mfa_agregado',
@@ -52,7 +49,6 @@ function mapPreferenciasSeguridad(row: PreferenciasSeguridadRow): SecurityNotifi
   return {
     cambioContrasena: row.notificar_cambio_contrasena,
     cambioEmail: row.notificar_cambio_email,
-    cambioTelefono: row.notificar_cambio_telefono,
     metodoLoginVinculado: row.notificar_metodo_login_vinculado,
     metodoLoginEliminado: row.notificar_metodo_login_eliminado,
     mfaAgregado: row.notificar_mfa_agregado,
@@ -66,7 +62,7 @@ export async function obtenerPreferenciasNotificacionSeguridad(
   const { data, error } = await supabase
     .from('perfiles')
     .select(
-      'notificar_cambio_contrasena, notificar_cambio_email, notificar_cambio_telefono, notificar_metodo_login_vinculado, notificar_metodo_login_eliminado, notificar_mfa_agregado, notificar_mfa_eliminado'
+      'notificar_cambio_contrasena, notificar_cambio_email, notificar_metodo_login_vinculado, notificar_metodo_login_eliminado, notificar_mfa_agregado, notificar_mfa_eliminado'
     )
     .eq('id', userId)
     .single<PreferenciasSeguridadRow>()

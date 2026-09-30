@@ -66,7 +66,7 @@ Zion combina dos capas:
 - **En la nube**: el contenido de las comunidades (mensajes, servidores, roles, canales, archivos) se sincroniza en tiempo real entre todos tus dispositivos apenas se envía o se modifica, sin que tengas que actualizar nada manualmente.
 - **En el dispositivo**: la app corre de forma nativa en tu celular, con integración al sistema operativo (notificaciones, selector de fotos, enlaces de invitación directos, actualizaciones en segundo plano). La personalización local solo está disponible a través de los archivos y herramientas oficiales que provee el desarrollador — nunca modificando el código o los binarios por cuenta propia.
 
-> **Plataformas**: Zion para móvil está disponible para Android e iOS.
+> **Plataformas**: Zion para móvil está disponible para Android.
 
 
 ## Licencia

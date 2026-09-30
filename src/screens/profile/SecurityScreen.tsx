@@ -40,11 +40,6 @@ const OPCIONES: { clave: keyof SecurityNotificationPrefs; label: string; descrip
     description: 'Te avisamos cuando tu dirección de correo haya cambiado.',
   },
   {
-    clave: 'cambioTelefono',
-    label: 'Número de teléfono cambiado',
-    description: 'Te avisamos cuando tu número de teléfono haya cambiado.',
-  },
-  {
     clave: 'metodoLoginVinculado',
     label: 'Método de acceso vinculado',
     description: 'Te avisamos cuando se vincule un nuevo método de inicio de sesión a tu cuenta.',

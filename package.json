@@ -1,14 +1,13 @@
 {
   "name": "zion-mobile",
   "private": true,
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Zion",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "postinstall": "node scripts/patch-webrtc-types.js",
     "start": "expo start",
     "android": "expo run:android",
-    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"

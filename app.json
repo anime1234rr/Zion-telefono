@@ -8,13 +8,6 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0f1117",
     "icon": "./assets/icon.png",
-    "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "com.lunayanet.zion",
-      "infoPlist": {
-        "NSMicrophoneUsageDescription": "Zion necesita el micrófono para los canales de voz."
-      }
-    },
     "android": {
       "package": "com.lunayanet.zion",
       "adaptiveIcon": {
