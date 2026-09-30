@@ -40,6 +40,12 @@
         }
       ],
       "expo-video",
+      [
+        "expo-media-library",
+        {
+          "savePhotosPermission": "Zion necesita acceso a tus fotos para guardar las imágenes que recibís."
+        }
+      ],
       "./plugins/withDisableForceDark.js",
       "@config-plugins/react-native-webrtc"
     ],

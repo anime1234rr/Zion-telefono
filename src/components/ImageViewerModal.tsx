@@ -1,8 +1,11 @@
 import { useState } from 'react'
-import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Dimensions, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
+import * as FileSystem from 'expo-file-system/legacy'
+import * as MediaLibrary from 'expo-media-library'
 
+import { showAppAlert } from '@/hooks/use-app-alert'
 import { spacing } from '@/theme/theme'
 
 export function ImageViewerModal({
@@ -13,7 +16,28 @@ export function ImageViewerModal({
   onClose: () => void
 }) {
   const [rotation, setRotation] = useState(0)
+  const [saving, setSaving] = useState(false)
   const { width, height } = Dimensions.get('window')
+
+  async function handleSave() {
+    if (!uri || saving) return
+    setSaving(true)
+    try {
+      const { status } = await MediaLibrary.requestPermissionsAsync()
+      if (status !== 'granted') {
+        showAppAlert('Sin permiso', 'Necesitamos acceso a tus fotos para guardar la imagen.')
+        return
+      }
+      const dest = `${FileSystem.cacheDirectory}zion-imagen-${Date.now()}.jpg`
+      const { uri: localUri } = await FileSystem.downloadAsync(uri, dest)
+      await MediaLibrary.saveToLibraryAsync(localUri)
+      showAppAlert('Imagen guardada en la galería')
+    } catch {
+      showAppAlert('Error', 'No se pudo guardar la imagen.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <Modal
@@ -49,6 +73,13 @@ export function ImageViewerModal({
         </ScrollView>
 
         <View style={styles.toolbar}>
+          <Pressable style={styles.toolBtn} onPress={handleSave} disabled={saving} hitSlop={8}>
+            {saving ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Ionicons name="download-outline" size={22} color="#fff" />
+            )}
+          </Pressable>
           <Pressable style={styles.toolBtn} onPress={() => setRotation((r) => r + 90)} hitSlop={8}>
             <Ionicons name="refresh-outline" size={22} color="#fff" />
           </Pressable>
