@@ -132,6 +132,8 @@ jobs:
           cat >> ~/.gradle/gradle.properties <<'EOF'
           org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m
           org.gradle.daemon=false
+          org.gradle.caching=true
+          org.gradle.parallel=true
           kotlin.daemon.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=768m
           EOF
 
