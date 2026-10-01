@@ -13,6 +13,7 @@ export type RootStackParamList = {
   Friends: undefined
   Profile: undefined
   Security: undefined
+  Legal: undefined
   Notifications: undefined
   ServerMembers: { serverId: string }
   ServerSettings: { serverId: string }

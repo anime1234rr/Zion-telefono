@@ -201,6 +201,12 @@ export function ProfileScreen() {
             <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
           </Pressable>
 
+          <Pressable style={styles.linkRow} onPress={() => navigation.navigate('Legal')}>
+            <Ionicons name="document-text-outline" size={18} color={colors.mutedForeground} />
+            <Text style={styles.linkRowText}>Términos y Privacidad</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+          </Pressable>
+
           <Pressable style={styles.linkRow} onPress={() => checkForUpdates({ manual: true })}>
             <Ionicons name="cloud-download-outline" size={18} color={colors.mutedForeground} />
             <Text style={styles.linkRowText}>Buscar actualizaciones</Text>

@@ -22,6 +22,7 @@ import { ServerMembersScreen } from '@/screens/servers/ServerMembersScreen'
 import { ServerSettingsScreen } from '@/screens/servers/ServerSettingsScreen'
 import { ProfileScreen } from '@/screens/profile/ProfileScreen'
 import { SecurityScreen } from '@/screens/profile/SecurityScreen'
+import { LegalScreen } from '@/screens/profile/LegalScreen'
 import { ChangeEmailScreen } from '@/screens/profile/ChangeEmailScreen'
 import { VoiceChannelPlaceholderScreen } from '@/screens/placeholders/VoiceChannelPlaceholderScreen'
 import { VoiceChannelScreen } from '@/screens/servers/VoiceChannelScreen'
@@ -79,6 +80,7 @@ export function RootNavigator() {
           <Stack.Screen name="ServerSettings" component={ServerSettingsScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="Security" component={SecurityScreen} />
+          <Stack.Screen name="Legal" component={LegalScreen} />
           <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
           <Stack.Screen
             name="Reauthenticate"
