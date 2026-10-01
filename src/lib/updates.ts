@@ -8,7 +8,7 @@ import Constants from 'expo-constants'
 import { showAppAlert } from '@/hooks/use-app-alert'
 import { escribirTexto, leerTexto } from '@/lib/local-store'
 
-const ZION_WEB_URL = (Constants.expoConfig?.extra?.webBaseUrl as string) ?? 'https://zionzx.netlify.app'
+const ZION_WEB_URL = (Constants.expoConfig?.extra?.webBaseUrl as string) ?? 'https://zionq.netlify.app'
 
 export const APP_VERSION =
   Application.nativeApplicationVersion ?? (Constants.expoConfig?.version as string) ?? '0.0.0'
