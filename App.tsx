@@ -1,3 +1,4 @@
+// A
 import { useEffect, useRef } from 'react'
 import { AppState, type AppStateStatus } from 'react-native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
