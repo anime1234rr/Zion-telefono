@@ -8,8 +8,7 @@ import Constants from 'expo-constants'
 import { showAppAlert } from '@/hooks/use-app-alert'
 import { escribirTexto, leerTexto } from '@/lib/local-store'
 
-const GITHUB_REPO = (Constants.expoConfig?.extra?.githubRepo as string) ?? 'anime1234rr/zion'
-const RELEASE_TAG_PREFIX = (Constants.expoConfig?.extra?.mobileReleaseTagPrefix as string) ?? 'mobile-v'
+const ZION_WEB_URL = (Constants.expoConfig?.extra?.webBaseUrl as string) ?? 'https://zionzx.netlify.app'
 
 export const APP_VERSION =
   Application.nativeApplicationVersion ?? (Constants.expoConfig?.version as string) ?? '0.0.0'
@@ -19,22 +18,16 @@ const K_APK_DISMISSED = 'zion:update:apk-dismissed'
 const K_OTA_DISMISSED = 'zion:update:ota-dismissed'
 const THROTTLE_MS = 3 * 60 * 60 * 1000
 
-type GithubAsset = {
-  name: string
-  browser_download_url: string
-}
-
-type GithubRelease = {
-  tag_name: string
-  body?: string
-  assets: GithubAsset[]
+type WebVersionResponse = {
+  version: string
+  releaseNotes?: string
+  releaseDate?: string | null
 }
 
 type CheckOptions = { manual?: boolean }
 
 function parseVersion(version: string): number[] {
   return version
-    .replace(RELEASE_TAG_PREFIX, '')
     .replace(/^v/, '')
     .split('.')
     .map((part) => parseInt(part, 10) || 0)
@@ -116,37 +109,26 @@ async function checkForOtaUpdate(manual: boolean): Promise<boolean> {
   }
 }
 
-async function fetchLatestMobileRelease(): Promise<GithubRelease | null> {
-  const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases`)
+async function fetchLatestMobileVersion(): Promise<WebVersionResponse | null> {
+  const response = await fetch(`${ZION_WEB_URL}/api/version/android`)
   if (!response.ok) return null
-
-  const releases = (await response.json()) as GithubRelease[]
-  return releases
-    .filter((release) => release.tag_name.startsWith(RELEASE_TAG_PREFIX))
-    .reduce<GithubRelease | null>(
-      (latest, release) => (!latest || isNewer(release.tag_name, latest.tag_name) ? release : latest),
-      null
-    )
+  return (await response.json()) as WebVersionResponse
 }
 
 async function checkForNativeUpdate(manual: boolean): Promise<boolean> {
   if (Platform.OS !== 'android') return false
 
   try {
-    const release = await fetchLatestMobileRelease()
+    const release = await fetchLatestMobileVersion()
     if (!release) return false
-    if (!isNewer(release.tag_name, APP_VERSION)) return false
+    if (!isNewer(release.version, APP_VERSION)) return false
 
-    const apkAsset = release.assets.find((asset) => asset.name.endsWith('.apk'))
-    if (!apkAsset) return false
+    if (!manual && (await leerTexto(K_APK_DISMISSED)) === release.version) return true
 
-    if (!manual && (await leerTexto(K_APK_DISMISSED)) === release.tag_name) return true
-
-    const version = release.tag_name.replace(RELEASE_TAG_PREFIX, '')
-    const notas = recortarNotas(release.body)
+    const notas = recortarNotas(release.releaseNotes)
 
     showAppAlert(
-      `Zion ${version} disponible`,
+      `Zion ${release.version} disponible`,
       notas
         ? `Novedades:\n\n${notas}\n\nEsta versión trae cambios que requieren actualizar la app.`
         : 'Hay una versión nueva con cambios que requieren actualizar la app.',
@@ -155,10 +137,10 @@ async function checkForNativeUpdate(manual: boolean): Promise<boolean> {
           text: 'Más tarde',
           style: 'cancel',
           onPress: () => {
-            void escribirTexto(K_APK_DISMISSED, release.tag_name)
+            void escribirTexto(K_APK_DISMISSED, release.version)
           },
         },
-        { text: 'Descargar', onPress: () => downloadAndInstallApk(apkAsset.browser_download_url) },
+        { text: 'Descargar', onPress: () => downloadAndInstallApk(`${ZION_WEB_URL}/api/download/android`) },
       ]
     )
     return true
@@ -184,7 +166,7 @@ async function downloadAndInstallApk(url: string): Promise<void> {
   } catch {
     showAppAlert('No se pudo descargar la actualización', 'Probá de nuevo más tarde, o descargala manualmente.', [
       { text: 'Cerrar', style: 'cancel' },
-      { text: 'Abrir GitHub', onPress: () => Linking.openURL(`https://github.com/${GITHUB_REPO}/releases`) },
+      { text: 'Abrir web', onPress: () => Linking.openURL(`${ZION_WEB_URL}/download`) },
     ])
   }
 }
