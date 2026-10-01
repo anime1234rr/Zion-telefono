@@ -9,9 +9,14 @@ import { FriendRow } from '@/components/FriendRow'
 import { EmptyState } from '@/components/EmptyState'
 import { UserProfileModal } from '@/components/UserProfileModal'
 import { useAuth } from '@/hooks/use-auth'
+import { showAppAlert } from '@/hooks/use-app-alert'
+import { leerTexto, escribirTexto } from '@/lib/local-store'
 import {
   aceptarSolicitudAmistad,
+  bloquearUsuario,
   buscarUsuarioPorNombre,
+  desbloquearUsuario,
+  eliminarAmistad,
   enviarSolicitudAmistad,
   listarAmistades,
   rechazarSolicitudAmistad,
@@ -24,15 +29,42 @@ import type { RootStackParamList } from '@/navigation/types'
 import { colors } from '@/theme/colors'
 import { fontSize, radius, spacing } from '@/theme/theme'
 
+type Tab = 'online' | 'todos' | 'pendientes' | 'bloqueados'
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'online', label: 'Online' },
+  { id: 'todos', label: 'Todos' },
+  { id: 'pendientes', label: 'Pendientes' },
+  { id: 'bloqueados', label: 'Bloqueados' },
+]
+
+const TAB_STORAGE_KEY = 'zion:inicio:tab'
+
+function esTabValida(value: string | null): value is Tab {
+  return value === 'online' || value === 'todos' || value === 'pendientes' || value === 'bloqueados'
+}
+
 export function FriendsScreen() {
   const { user } = useAuth()
   const userId = user?.id ?? null
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+  const [tab, setTabState] = useState<Tab>('online')
   const [friends, setFriends] = useState<Friend[]>([])
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<ChatUser[]>([])
   const [error, setError] = useState<string | null>(null)
   const [profileUserId, setProfileUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    leerTexto(TAB_STORAGE_KEY).then((value) => {
+      if (esTabValida(value)) setTabState(value)
+    })
+  }, [])
+
+  function setTab(next: Tab) {
+    setTabState(next)
+    void escribirTexto(TAB_STORAGE_KEY, next)
+  }
 
   const cargar = useCallback(() => {
     if (!userId) return
@@ -95,15 +127,51 @@ export function FriendsScreen() {
     }
   }
 
+  function openFriendOptions(friend: Friend) {
+    showAppAlert(friend.user.name, undefined, [
+      {
+        text: 'Eliminar amigo',
+        style: 'destructive',
+        onPress: () => {
+          eliminarAmistad(friend.user.id).then(cargar).catch((err) => setError(getErrorMessage(err)))
+        },
+      },
+      {
+        text: 'Bloquear',
+        style: 'destructive',
+        onPress: () => {
+          bloquearUsuario(friend.user.id).then(cargar).catch((err) => setError(getErrorMessage(err)))
+        },
+      },
+      { text: 'Cancelar', style: 'cancel' },
+    ])
+  }
+
   const relacionPorUsuario = useMemo(() => {
     const mapa = new Map<string, { id: string; status: FriendStatus }>()
     for (const f of friends) mapa.set(f.user.id, { id: f.id, status: f.status })
     return mapa
   }, [friends])
 
-  const pendientesRecibidas = friends.filter((f) => f.status === 'pendiente_recibida')
-  const aceptadas = friends.filter((f) => f.status === 'aceptada')
-  const enviadas = friends.filter((f) => f.status === 'pendiente_enviada')
+  const filteredFriends = useMemo(() => {
+    switch (tab) {
+      case 'online':
+        return friends.filter((f) => f.status === 'aceptada' && f.user.status !== 'offline')
+      case 'todos':
+        return friends.filter(
+          (f) => f.status === 'aceptada' || f.status === 'pendiente_recibida' || f.status === 'pendiente_enviada'
+        )
+      case 'pendientes':
+        return friends.filter((f) => f.status === 'pendiente_enviada' || f.status === 'pendiente_recibida')
+      case 'bloqueados':
+        return friends.filter((f) => f.status === 'bloqueada')
+    }
+  }, [friends, tab])
+
+  const pendingCount = useMemo(
+    () => friends.filter((f) => f.status === 'pendiente_recibida').length,
+    [friends]
+  )
 
   return (
     <ScreenContainer>
@@ -158,11 +226,35 @@ export function FriendsScreen() {
         </View>
       ) : null}
 
+      <View style={styles.tabs}>
+        {TABS.map(({ id, label }) => (
+          <Pressable key={id} style={[styles.tab, tab === id && styles.tabActive]} onPress={() => setTab(id)}>
+            <Text style={[styles.tabLabel, tab === id && styles.tabLabelActive]}>{label}</Text>
+            {id === 'pendientes' && pendingCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{pendingCount}</Text>
+              </View>
+            )}
+          </Pressable>
+        ))}
+      </View>
+
       <FlatList
-        data={[...pendientesRecibidas, ...aceptadas, ...enviadas]}
+        data={filteredFriends}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={
-          <EmptyState title="Todavía no tenés amigos" description="Buscalos por su nombre de usuario." />
+          <EmptyState
+            title={
+              tab === 'online'
+                ? 'Nadie conectado ahora mismo'
+                : tab === 'todos'
+                  ? 'Todavía no tenés amigos'
+                  : tab === 'pendientes'
+                    ? 'No hay solicitudes pendientes'
+                    : 'No bloqueaste a nadie'
+            }
+            description={tab === 'todos' ? 'Buscalos por su nombre de usuario.' : undefined}
+          />
         }
         renderItem={({ item }) => (
           <FriendRow
@@ -185,7 +277,25 @@ export function FriendsScreen() {
                     <Ionicons name="close" size={16} color={colors.foreground} />
                   </Pressable>
                 </View>
-              ) : undefined
+              ) : item.status === 'pendiente_enviada' ? (
+                <Pressable
+                  style={styles.cancelButton}
+                  onPress={() => rechazarSolicitudAmistad(item.id).then(cargar)}
+                >
+                  <Text style={styles.cancelButtonLabel}>Cancelar</Text>
+                </Pressable>
+              ) : item.status === 'bloqueada' ? (
+                <Pressable
+                  style={styles.cancelButton}
+                  onPress={() => desbloquearUsuario(item.user.id).then(cargar)}
+                >
+                  <Text style={styles.cancelButtonLabel}>Desbloquear</Text>
+                </Pressable>
+              ) : (
+                <Pressable style={styles.moreButton} onPress={() => openFriendOptions(item)} hitSlop={8}>
+                  <Ionicons name="ellipsis-horizontal" size={18} color={colors.mutedForeground} />
+                </Pressable>
+              )
             }
           />
         )}
@@ -267,6 +377,49 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: '600',
   },
+  tabs: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.secondary,
+    borderRadius: radius.md,
+    padding: 4,
+    gap: 4,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+  },
+  tabActive: {
+    backgroundColor: colors.primary,
+  },
+  tabLabel: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.xs,
+    fontWeight: '600',
+  },
+  tabLabelActive: {
+    color: colors.primaryForeground,
+  },
+  badge: {
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    backgroundColor: colors.destructive,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
   actions: {
     flexDirection: 'row',
     gap: spacing.xs,
@@ -284,6 +437,24 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     backgroundColor: colors.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+  },
+  cancelButtonLabel: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.xs,
+    fontWeight: '600',
+  },
+  moreButton: {
+    width: 28,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },

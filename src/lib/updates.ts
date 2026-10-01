@@ -9,6 +9,8 @@ import { showAppAlert } from '@/hooks/use-app-alert'
 import { escribirTexto, leerTexto } from '@/lib/local-store'
 
 const ZION_WEB_URL = (Constants.expoConfig?.extra?.webBaseUrl as string) ?? 'https://zionq.netlify.app'
+const GITHUB_OWNER = 'anime1234rr'
+const GITHUB_REPO = 'Zion-telefono'
 
 export const APP_VERSION =
   Application.nativeApplicationVersion ?? (Constants.expoConfig?.version as string) ?? '0.0.0'
@@ -18,10 +20,11 @@ const K_APK_DISMISSED = 'zion:update:apk-dismissed'
 const K_OTA_DISMISSED = 'zion:update:ota-dismissed'
 const THROTTLE_MS = 3 * 60 * 60 * 1000
 
-type WebVersionResponse = {
+type RemoteVersionData = {
   version: string
-  releaseNotes?: string
-  releaseDate?: string | null
+  releaseNotes: string
+  releaseDate: string | null
+  downloadUrl: string
 }
 
 type CheckOptions = { manual?: boolean }
@@ -109,10 +112,58 @@ async function checkForOtaUpdate(manual: boolean): Promise<boolean> {
   }
 }
 
-async function fetchLatestMobileVersion(): Promise<WebVersionResponse | null> {
+async function fetchVersionViaWebProxy(): Promise<RemoteVersionData | null> {
   const response = await fetch(`${ZION_WEB_URL}/api/version/android`)
   if (!response.ok) return null
-  return (await response.json()) as WebVersionResponse
+
+  const data = (await response.json()) as {
+    version: string
+    releaseNotes?: string
+    releaseDate?: string | null
+  }
+  return {
+    version: data.version,
+    releaseNotes: data.releaseNotes ?? '',
+    releaseDate: data.releaseDate ?? null,
+    downloadUrl: `${ZION_WEB_URL}/api/download/android`,
+  }
+}
+
+async function fetchVersionViaGithubDirect(): Promise<RemoteVersionData | null> {
+  const response = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases`)
+  if (!response.ok) return null
+
+  const releases = (await response.json()) as {
+    tag_name: string
+    body?: string
+    published_at?: string
+    assets: { name: string; browser_download_url: string }[]
+  }[]
+
+  const latest = releases
+    .filter((r) => r.tag_name.startsWith('mobile-v'))
+    .reduce<(typeof releases)[number] | null>(
+      (best, r) =>
+        !best || isNewer(r.tag_name.replace(/^mobile-v/, ''), best.tag_name.replace(/^mobile-v/, ''))
+          ? r
+          : best,
+      null
+    )
+  if (!latest) return null
+
+  const apk = latest.assets.find((a) => a.name.endsWith('.apk'))
+  if (!apk) return null
+
+  return {
+    version: latest.tag_name.replace(/^mobile-v/, ''),
+    releaseNotes: latest.body ?? '',
+    releaseDate: latest.published_at ?? null,
+    downloadUrl: apk.browser_download_url,
+  }
+}
+
+async function fetchLatestMobileVersion(): Promise<RemoteVersionData | null> {
+  return (await fetchVersionViaWebProxy().catch(() => null)) ?? (await fetchVersionViaGithubDirect().catch(() => null))
 }
 
 async function checkForNativeUpdate(manual: boolean): Promise<boolean> {
@@ -140,7 +191,7 @@ async function checkForNativeUpdate(manual: boolean): Promise<boolean> {
             void escribirTexto(K_APK_DISMISSED, release.version)
           },
         },
-        { text: 'Descargar', onPress: () => downloadAndInstallApk(`${ZION_WEB_URL}/api/download/android`) },
+        { text: 'Descargar', onPress: () => downloadAndInstallApk(release.downloadUrl) },
       ]
     )
     return true

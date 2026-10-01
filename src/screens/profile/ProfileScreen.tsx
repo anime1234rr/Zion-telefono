@@ -207,6 +207,14 @@ export function ProfileScreen() {
             <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
           </Pressable>
 
+          <View style={styles.linkRow}>
+            <Ionicons name="code-slash-outline" size={18} color={colors.mutedForeground} />
+            <Text style={styles.linkRowText}>Temas</Text>
+            <View style={styles.comingSoonBadge}>
+              <Text style={styles.comingSoonText}>Próximamente</Text>
+            </View>
+          </View>
+
           <Pressable style={styles.linkRow} onPress={() => checkForUpdates({ manual: true })}>
             <Ionicons name="cloud-download-outline" size={18} color={colors.mutedForeground} />
             <Text style={styles.linkRowText}>Buscar actualizaciones</Text>
@@ -372,6 +380,13 @@ const styles = StyleSheet.create({
   },
   linkRowText: { flex: 1, color: colors.foreground, fontSize: fontSize.md },
   linkRowMeta: { color: colors.mutedForeground, fontSize: fontSize.sm },
+  comingSoonBadge: {
+    backgroundColor: colors.secondary,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  comingSoonText: { color: colors.mutedForeground, fontSize: 10, fontWeight: '600' },
   signOutButton: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -13,8 +13,9 @@ import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import { ScreenContainer } from '@/components/ScreenContainer'
+import { PlantillaPreview } from '@/components/PlantillaPreview'
 import { crearServidor, unirseAServidor } from '@/lib/servers'
-import { listarPlantillas, type PlantillaServidor } from '@/lib/templates'
+import { listarPlantillasConDetalle, type PlantillaServidorDetalle } from '@/lib/templates'
 import { getErrorMessage } from '@/lib/utils'
 import type { RootStackParamList } from '@/navigation/types'
 import { colors } from '@/theme/colors'
@@ -29,12 +30,14 @@ export function CreateOrJoinServerScreen() {
   const [codigo, setCodigo] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [plantillas, setPlantillas] = useState<PlantillaServidor[]>([])
+  const [plantillas, setPlantillas] = useState<PlantillaServidorDetalle[]>([])
   const [plantillaId, setPlantillaId] = useState<string | null>(null)
 
   useEffect(() => {
-    listarPlantillas().then(setPlantillas).catch(() => {})
+    listarPlantillasConDetalle().then(setPlantillas).catch(() => {})
   }, [])
+
+  const plantillaSeleccionada = plantillas.find((p) => p.id === plantillaId) ?? null
 
   async function handleSubmit() {
     setError(null)
@@ -116,6 +119,17 @@ export function CreateOrJoinServerScreen() {
                     </Pressable>
                   ))}
                 </ScrollView>
+              </View>
+            ) : null}
+
+            {plantillaSeleccionada ? (
+              <View style={styles.field}>
+                <Text style={styles.label}>
+                  Así arranca tu servidor con &ldquo;{plantillaSeleccionada.nombre}&rdquo;
+                </Text>
+                <View style={styles.preview}>
+                  <PlantillaPreview plantilla={plantillaSeleccionada} />
+                </View>
               </View>
             ) : null}
           </>
@@ -227,6 +241,13 @@ const styles = StyleSheet.create({
   },
   tplActive: { borderColor: colors.primary, backgroundColor: 'rgba(99,102,241,0.12)' },
   tplText: { color: colors.foreground, fontSize: fontSize.xs, fontWeight: '600' },
+  preview: {
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+  },
   submitButton: {
     backgroundColor: colors.primary,
     borderRadius: radius.md,
