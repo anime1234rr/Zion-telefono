@@ -59,7 +59,8 @@
       "eas": {
         "projectId": "77756d09-764d-43a7-87fd-e12c43d66099"
       },
-      "webBaseUrl": "https://zionq.netlify.app"
+      "githubRepo": "anime1234rr/Zion-telefono",
+      "mobileReleaseTagPrefix": "mobile-v"
     },
     "owner": "anime1234r"
   }

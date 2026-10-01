@@ -8,9 +8,8 @@ import Constants from 'expo-constants'
 import { showAppAlert } from '@/hooks/use-app-alert'
 import { escribirTexto, leerTexto } from '@/lib/local-store'
 
-const ZION_WEB_URL = (Constants.expoConfig?.extra?.webBaseUrl as string) ?? 'https://zionq.netlify.app'
-const GITHUB_OWNER = 'anime1234rr'
-const GITHUB_REPO = 'Zion-telefono'
+const GITHUB_REPO = (Constants.expoConfig?.extra?.githubRepo as string) ?? 'anime1234rr/zion'
+const RELEASE_TAG_PREFIX = (Constants.expoConfig?.extra?.mobileReleaseTagPrefix as string) ?? 'mobile-v'
 
 export const APP_VERSION =
   Application.nativeApplicationVersion ?? (Constants.expoConfig?.version as string) ?? '0.0.0'
@@ -20,17 +19,22 @@ const K_APK_DISMISSED = 'zion:update:apk-dismissed'
 const K_OTA_DISMISSED = 'zion:update:ota-dismissed'
 const THROTTLE_MS = 3 * 60 * 60 * 1000
 
-type RemoteVersionData = {
-  version: string
-  releaseNotes: string
-  releaseDate: string | null
-  downloadUrl: string
+type GithubAsset = {
+  name: string
+  browser_download_url: string
+}
+
+type GithubRelease = {
+  tag_name: string
+  body?: string
+  assets: GithubAsset[]
 }
 
 type CheckOptions = { manual?: boolean }
 
 function parseVersion(version: string): number[] {
   return version
+    .replace(RELEASE_TAG_PREFIX, '')
     .replace(/^v/, '')
     .split('.')
     .map((part) => parseInt(part, 10) || 0)
@@ -112,74 +116,37 @@ async function checkForOtaUpdate(manual: boolean): Promise<boolean> {
   }
 }
 
-async function fetchVersionViaWebProxy(): Promise<RemoteVersionData | null> {
-  const response = await fetch(`${ZION_WEB_URL}/api/version/android`)
+async function fetchLatestMobileRelease(): Promise<GithubRelease | null> {
+  const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases`)
   if (!response.ok) return null
 
-  const data = (await response.json()) as {
-    version: string
-    releaseNotes?: string
-    releaseDate?: string | null
-  }
-  return {
-    version: data.version,
-    releaseNotes: data.releaseNotes ?? '',
-    releaseDate: data.releaseDate ?? null,
-    downloadUrl: `${ZION_WEB_URL}/api/download/android`,
-  }
-}
-
-async function fetchVersionViaGithubDirect(): Promise<RemoteVersionData | null> {
-  const response = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases`)
-  if (!response.ok) return null
-
-  const releases = (await response.json()) as {
-    tag_name: string
-    body?: string
-    published_at?: string
-    assets: { name: string; browser_download_url: string }[]
-  }[]
-
-  const latest = releases
-    .filter((r) => r.tag_name.startsWith('mobile-v'))
-    .reduce<(typeof releases)[number] | null>(
-      (best, r) =>
-        !best || isNewer(r.tag_name.replace(/^mobile-v/, ''), best.tag_name.replace(/^mobile-v/, ''))
-          ? r
-          : best,
+  const releases = (await response.json()) as GithubRelease[]
+  return releases
+    .filter((release) => release.tag_name.startsWith(RELEASE_TAG_PREFIX))
+    .reduce<GithubRelease | null>(
+      (latest, release) => (!latest || isNewer(release.tag_name, latest.tag_name) ? release : latest),
       null
     )
-  if (!latest) return null
-
-  const apk = latest.assets.find((a) => a.name.endsWith('.apk'))
-  if (!apk) return null
-
-  return {
-    version: latest.tag_name.replace(/^mobile-v/, ''),
-    releaseNotes: latest.body ?? '',
-    releaseDate: latest.published_at ?? null,
-    downloadUrl: apk.browser_download_url,
-  }
-}
-
-async function fetchLatestMobileVersion(): Promise<RemoteVersionData | null> {
-  return (await fetchVersionViaWebProxy().catch(() => null)) ?? (await fetchVersionViaGithubDirect().catch(() => null))
 }
 
 async function checkForNativeUpdate(manual: boolean): Promise<boolean> {
   if (Platform.OS !== 'android') return false
 
   try {
-    const release = await fetchLatestMobileVersion()
+    const release = await fetchLatestMobileRelease()
     if (!release) return false
-    if (!isNewer(release.version, APP_VERSION)) return false
+    if (!isNewer(release.tag_name, APP_VERSION)) return false
 
-    if (!manual && (await leerTexto(K_APK_DISMISSED)) === release.version) return true
+    const apkAsset = release.assets.find((asset) => asset.name.endsWith('.apk'))
+    if (!apkAsset) return false
 
-    const notas = recortarNotas(release.releaseNotes)
+    if (!manual && (await leerTexto(K_APK_DISMISSED)) === release.tag_name) return true
+
+    const version = release.tag_name.replace(RELEASE_TAG_PREFIX, '')
+    const notas = recortarNotas(release.body)
 
     showAppAlert(
-      `Zion ${release.version} disponible`,
+      `Zion ${version} disponible`,
       notas
         ? `Novedades:\n\n${notas}\n\nEsta versión trae cambios que requieren actualizar la app.`
         : 'Hay una versión nueva con cambios que requieren actualizar la app.',
@@ -188,10 +155,10 @@ async function checkForNativeUpdate(manual: boolean): Promise<boolean> {
           text: 'Más tarde',
           style: 'cancel',
           onPress: () => {
-            void escribirTexto(K_APK_DISMISSED, release.version)
+            void escribirTexto(K_APK_DISMISSED, release.tag_name)
           },
         },
-        { text: 'Descargar', onPress: () => downloadAndInstallApk(release.downloadUrl) },
+        { text: 'Descargar', onPress: () => downloadAndInstallApk(apkAsset.browser_download_url) },
       ]
     )
     return true
@@ -217,7 +184,7 @@ async function downloadAndInstallApk(url: string): Promise<void> {
   } catch {
     showAppAlert('No se pudo descargar la actualización', 'Probá de nuevo más tarde, o descargala manualmente.', [
       { text: 'Cerrar', style: 'cancel' },
-      { text: 'Abrir web', onPress: () => Linking.openURL(`${ZION_WEB_URL}/download`) },
+      { text: 'Abrir GitHub', onPress: () => Linking.openURL(`https://github.com/${GITHUB_REPO}/releases`) },
     ])
   }
 }
