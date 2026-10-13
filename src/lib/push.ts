@@ -79,21 +79,26 @@ async function registrarPushInterno(preguntar: boolean): Promise<EstadoPermisoPu
   if (estado !== 'concedido') return estado
 
   const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId: projectId() })
-  const tokenGuardado = await leerJSON<string | null>(CLAVE_TOKEN, null)
-  if (token === tokenGuardado) return 'concedido'
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const claveActual = `${user?.id ?? ''}:${token}`
+  const claveGuardada = await leerJSON<string | null>(CLAVE_TOKEN, null)
+  if (claveActual === claveGuardada) return 'concedido'
 
   const { error } = await supabase.rpc('registrar_push_token', {
     p_token: token,
     p_plataforma: Platform.OS === 'ios' ? 'ios' : 'android',
   })
   if (error) throw error
-  await escribirJSON(CLAVE_TOKEN, token)
+  await escribirJSON(CLAVE_TOKEN, claveActual)
   return 'concedido'
 }
 
 export async function desregistrarPush(): Promise<void> {
-  const token = await leerJSON<string | null>(CLAVE_TOKEN, null)
-  if (!token) return
+  const claveGuardada = await leerJSON<string | null>(CLAVE_TOKEN, null)
+  if (!claveGuardada) return
+  const token = claveGuardada.slice(claveGuardada.indexOf(':') + 1)
   await supabase.rpc('quitar_push_token', { p_token: token })
   await escribirJSON(CLAVE_TOKEN, null)
 }
