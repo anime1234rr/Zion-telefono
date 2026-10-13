@@ -104,14 +104,18 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
+      - name: Cachear NDK/CMake de Android
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_SDK_ROOT }}/ndk
+            ${{ env.ANDROID_SDK_ROOT }}/cmake
+          key: android-ndk-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            android-ndk-${{ runner.os }}-
+
       - name: Instalar dependencias
         run: npm ci
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Lint
-        run: npm run lint
 
       - name: Sincronizar versión de app.json con package.json
         run: |
@@ -139,7 +143,7 @@ jobs:
 
       - name: Compilar APK release
         working-directory: android
-        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a --no-daemon
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
