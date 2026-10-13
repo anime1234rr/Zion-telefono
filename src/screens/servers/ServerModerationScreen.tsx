@@ -28,7 +28,7 @@ import {
 import { getErrorMessage } from '@/lib/utils'
 import type { ServerHistoryRetention, ServerItem, ServerVerificationLevel } from '@/lib/types'
 import type { RootStackParamList } from '@/navigation/types'
-import { colors } from '@/theme/colors'
+import { alfa, colors } from '@/theme/colors'
 import { fontSize, radius, spacing } from '@/theme/theme'
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ServerModeration'>
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.xs,
   },
-  radioActive: { borderColor: colors.primary, backgroundColor: 'rgba(99,102,241,0.06)' },
+  radioActive: { borderColor: colors.primary, backgroundColor: alfa(colors.primary, 0.06) },
   radioDot: {
     width: 18,
     height: 18,
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
   },
-  segActive: { borderColor: colors.primary, backgroundColor: 'rgba(99,102,241,0.12)' },
+  segActive: { borderColor: colors.primary, backgroundColor: alfa(colors.primary, 0.12) },
   segText: { color: colors.mutedForeground, fontSize: fontSize.xs, fontWeight: '600' },
   segTextActive: { color: colors.foreground },
   raidLock: {
@@ -433,8 +433,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.4)',
-    backgroundColor: 'rgba(239,68,68,0.1)',
+    borderColor: alfa(colors.destructive, 0.4),
+    backgroundColor: alfa(colors.destructive, 0.1),
     borderRadius: radius.sm,
     padding: spacing.sm,
     marginTop: spacing.xs,

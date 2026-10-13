@@ -17,8 +17,16 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { ScreenContainer } from '@/components/ScreenContainer'
 import { Avatar } from '@/components/Avatar'
 import { useAuth } from '@/hooks/use-auth'
+import { useStaffCaps } from '@/hooks/use-staff-caps'
 import { showAppAlert } from '@/hooks/use-app-alert'
-import { actualizarAvatar, actualizarPerfil, obtenerPerfilEditable, type EditableProfile } from '@/lib/profiles'
+import {
+  actualizarAvatar,
+  actualizarPerfil,
+  estadoPropioAStatus,
+  obtenerPerfilEditable,
+  type EditableProfile,
+} from '@/lib/profiles'
+import { suscribirseAMiPerfil } from '@/lib/presence'
 import { subirAvatar } from '@/lib/storage'
 import { getErrorMessage } from '@/lib/utils'
 import { APP_VERSION, checkForUpdates } from '@/lib/updates'
@@ -37,6 +45,7 @@ const STATUS_OPTIONS: { value: UserStatus; label: string }[] = [
 export function ProfileScreen() {
   const { user, signOut } = useAuth()
   const userId = user?.id ?? null
+  const staffCaps = useStaffCaps(user?.id)
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
 
   const [profile, setProfile] = useState<EditableProfile | null>(null)
@@ -55,6 +64,10 @@ export function ProfileScreen() {
           setBiografia(data.biografia)
         })
         .catch((err) => console.error('No se pudo cargar el perfil', err))
+
+      return suscribirseAMiPerfil(userId, (row) => {
+        setProfile((prev) => (prev ? { ...prev, status: estadoPropioAStatus(row.estado) } : prev))
+      })
     }, [userId])
   )
 
@@ -200,6 +213,38 @@ export function ProfileScreen() {
             <Text style={styles.linkRowText}>Seguridad y verificación en dos pasos</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
           </Pressable>
+
+          <Pressable style={styles.linkRow} onPress={() => navigation.navigate('AppSettings')}>
+            <Ionicons name="settings-outline" size={18} color={colors.mutedForeground} />
+            <Text style={styles.linkRowText}>Configuración de la app</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+          </Pressable>
+
+          <Pressable style={styles.linkRow} onPress={() => navigation.navigate('SavedMessages')}>
+            <Ionicons name="bookmark-outline" size={18} color={colors.mutedForeground} />
+            <Text style={styles.linkRowText}>Mensajes guardados</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+          </Pressable>
+
+          <Pressable style={styles.linkRow} onPress={() => navigation.navigate('AccountHistory')}>
+            <Ionicons name="shield-outline" size={18} color={colors.mutedForeground} />
+            <Text style={styles.linkRowText}>Estado de mi cuenta</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+          </Pressable>
+
+          <Pressable style={styles.linkRow} onPress={() => navigation.navigate('Help')}>
+            <Ionicons name="help-buoy-outline" size={18} color={colors.mutedForeground} />
+            <Text style={styles.linkRowText}>Ayuda y soporte</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+          </Pressable>
+
+          {staffCaps.esStaff ? (
+            <Pressable style={styles.linkRow} onPress={() => navigation.navigate('StaffPanel')}>
+              <Ionicons name="shield-half-outline" size={18} color={colors.primary} />
+              <Text style={styles.linkRowText}>Panel de staff</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+            </Pressable>
+          ) : null}
 
           <Pressable style={styles.linkRow} onPress={() => navigation.navigate('Legal')}>
             <Ionicons name="document-text-outline" size={18} color={colors.mutedForeground} />

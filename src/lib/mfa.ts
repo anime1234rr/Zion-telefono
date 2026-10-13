@@ -1,3 +1,5 @@
+import type { RealtimeChannel } from '@supabase/supabase-js'
+
 import { supabase } from '@/lib/supabase'
 
 export interface MfaFactor {
@@ -16,7 +18,7 @@ export interface MfaEnrollment {
 export async function listarFactoresMfa(): Promise<MfaFactor[]> {
   const { data, error } = await supabase.auth.mfa.listFactors()
   if (error) throw error
-  return (data?.totp ?? []).map((f) => ({
+  return (data?.all ?? []).filter((f) => f.factor_type === 'totp').map((f) => ({
     id: f.id,
     friendlyName: f.friendly_name ?? null,
     status: f.status,
@@ -81,4 +83,42 @@ export async function confirmarEnrolamientoMfa(factorId: string, code: string): 
 export async function quitarFactorMfa(factorId: string): Promise<void> {
   const { error } = await supabase.auth.mfa.unenroll({ factorId })
   if (error) throw error
+}
+
+export async function necesitaVerificacionMfa(): Promise<boolean> {
+  const { data: aal, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+  if (aalError) throw aalError
+  if (aal.currentLevel === 'aal2') return false
+
+  const { data, error } = await supabase.auth.getUser()
+  if (error || !data.user) return aal.nextLevel === 'aal2'
+  return (data.user.factors ?? []).some((f) => f.factor_type === 'totp' && f.status === 'verified')
+}
+
+export async function verificarCodigoMfa(code: string): Promise<void> {
+  const factores = await listarFactoresMfa()
+  const factor = factores.find((f) => f.status === 'verified')
+  if (!factor) throw new Error('No hay ninguna app de autenticación activa en esta cuenta.')
+  await confirmarEnrolamientoMfa(factor.id, code)
+}
+
+let canalCambiosMfa: RealtimeChannel | null = null
+
+export function suscribirseACambiosMfa(userId: string, onCambio: () => void): () => void {
+  const channel = supabase
+    .channel(`mfa-sync-${userId}`)
+    .on('broadcast', { event: 'cambio' }, () => onCambio())
+    .subscribe()
+  canalCambiosMfa = channel
+
+  return () => {
+    if (canalCambiosMfa === channel) canalCambiosMfa = null
+    supabase.removeChannel(channel)
+  }
+}
+
+export function avisarCambioMfa(): void {
+  canalCambiosMfa
+    ?.send({ type: 'broadcast', event: 'cambio', payload: {} })
+    .catch(() => {})
 }

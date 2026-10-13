@@ -12,6 +12,8 @@ import { MessageComposer } from '@/components/MessageComposer'
 import { ImageViewerModal } from '@/components/ImageViewerModal'
 import { PromptModal } from '@/components/PromptModal'
 import { MessageActionsModal, type MessageActionItem } from '@/components/MessageActionsModal'
+import { ForwardMessageSheet } from '@/components/ForwardMessageSheet'
+import { alternarMensajeGuardado, estaGuardado } from '@/lib/saved-messages'
 import { EmojiPickerModal } from '@/components/EmojiPickerModal'
 import { UserProfileModal } from '@/components/UserProfileModal'
 import { useAuth } from '@/hooks/use-auth'
@@ -25,7 +27,7 @@ import {
   obtenerConversacion,
   suscribirseAConversacion,
 } from '@/lib/dms'
-import { subirArchivoChat } from '@/lib/storage'
+import { subirArchivoChat, subirNotaDeVoz } from '@/lib/storage'
 import { parseFencedCode } from '@/lib/code-fence'
 import type { ChatMessage, DMConversation, ReplyPreview } from '@/lib/types'
 import type { RootStackParamList } from '@/navigation/types'
@@ -48,6 +50,7 @@ export function DMChatScreen() {
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null)
   const [profileUserId, setProfileUserId] = useState<string | null>(null)
   const [actionsMessage, setActionsMessage] = useState<ChatMessage | null>(null)
+  const [reenviando, setReenviando] = useState<ChatMessage | null>(null)
   const [reactingMessage, setReactingMessage] = useState<ChatMessage | null>(null)
 
   useEffect(() => {
@@ -127,8 +130,29 @@ export function DMChatScreen() {
     }
   }
 
+  async function handleSendVoice(uri: string) {
+    if (!user) return
+    const { url } = await subirNotaDeVoz(conversationId, uri)
+    const nuevo = await enviarMensajeDirecto(conversationId, { content: '', attachment: { url, type: 'audio' } })
+    setMessages((prev) => (prev.some((m) => m.id === nuevo.id) ? prev : [...prev, nuevo]))
+  }
+
   function buildMessageActions(message: ChatMessage): MessageActionItem[] {
     const actions: MessageActionItem[] = [
+      {
+        key: 'save',
+        label: estaGuardado(message.id) ? 'Quitar de guardados' : 'Guardar',
+        icon: estaGuardado(message.id) ? 'bookmark' : 'bookmark-outline',
+        onPress: () => {
+          alternarMensajeGuardado(message, { scope: 'dm', conversationId }).catch(() => {})
+        },
+      },
+      {
+        key: 'forward',
+        label: 'Reenviar',
+        icon: 'arrow-redo-outline',
+        onPress: () => setReenviando(message),
+      },
       {
         key: 'reply',
         label: 'Responder',
@@ -210,6 +234,7 @@ export function DMChatScreen() {
           placeholder={conversation ? `Mensaje a ${conversation.otherUser.name}` : 'Mensaje'}
           onSubmit={handleSubmit}
           onPickAttachment={handlePickAttachment}
+          onSendVoice={handleSendVoice}
           replyingTo={replyingTo}
           onCancelReply={() => setReplyingTo(null)}
           sending={sending}
@@ -249,6 +274,12 @@ export function DMChatScreen() {
       />
 
       <ImageViewerModal uri={viewerUri} onClose={() => setViewerUri(null)} />
+      <ForwardMessageSheet
+        message={reenviando}
+        sourceLabel={'Mensaje directo'}
+        currentUserId={user?.id ?? ''}
+        onClose={() => setReenviando(null)}
+      />
     </ScreenContainer>
   )
 }

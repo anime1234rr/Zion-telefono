@@ -100,6 +100,31 @@ function esPresenciaViva(actualizadoAt: string): boolean {
   return Date.now() - new Date(actualizadoAt).getTime() < HEARTBEAT_STALE_MS
 }
 
+export function estadoPublicoAStatus(estado: string, actualizadoAt: string): UserStatus {
+  const status = estadoToUserStatus[estado] ?? 'offline'
+  return status !== 'offline' && !esPresenciaViva(actualizadoAt) ? 'offline' : status
+}
+
+export function estadoPropioAStatus(estado: string): UserStatus {
+  if (estado === 'desconectado_cierre') return 'online'
+  return estadoToUserStatus[estado] ?? 'online'
+}
+
+export function mapPerfilPropio(row: PerfilRow): ChatUser {
+  return { ...mapPerfilToChatUser(row), status: estadoPropioAStatus(row.estado) }
+}
+
+export async function obtenerMiPerfil(userId: string): Promise<ChatUser> {
+  const { data, error } = await supabase
+    .from('perfiles')
+    .select('*')
+    .eq('id', userId)
+    .single<PerfilRow>()
+
+  if (error) throw error
+  return mapPerfilPropio(data)
+}
+
 const userStatusToEstado: Record<UserStatus, string> = {
   online: 'en_linea',
   idle: 'ausente',
@@ -167,7 +192,7 @@ function mapPerfilToEditableProfile(row: PerfilRow): EditableProfile {
     nombreUsuario: row.nombre_usuario,
     nombreCompleto: row.nombre_completo ?? '',
     biografia: row.biografia ?? '',
-    status: estadoToUserStatus[row.estado] ?? 'offline',
+    status: estadoPropioAStatus(row.estado),
     avatarUrl: row.avatar_url ?? undefined,
     colorBanner: row.color_banner,
     bannerUrl: row.banner_url ?? undefined,

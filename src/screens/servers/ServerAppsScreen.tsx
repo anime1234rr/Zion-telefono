@@ -17,7 +17,7 @@ import {
 import { listarRolesDeServidor, type ServerRole } from '@/lib/members'
 import { getErrorMessage } from '@/lib/utils'
 import type { RootStackParamList } from '@/navigation/types'
-import { colors } from '@/theme/colors'
+import { alfa, colors } from '@/theme/colors'
 import { fontSize, radius, spacing } from '@/theme/theme'
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ServerApps'>
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
   },
-  roleRowActive: { backgroundColor: 'rgba(99,102,241,0.08)', borderRadius: radius.sm },
+  roleRowActive: { backgroundColor: alfa(colors.primary, 0.08), borderRadius: radius.sm },
   roleDot: { width: 10, height: 10, borderRadius: 5 },
   roleName: { color: colors.foreground, fontSize: fontSize.sm, flex: 1 },
   dialogActions: {

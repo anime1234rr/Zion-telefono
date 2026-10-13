@@ -5,6 +5,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import { ScreenContainer } from '@/components/ScreenContainer'
+import { abrirEnlaceZion } from '@/lib/abrir-enlace'
 import { EmptyState } from '@/components/EmptyState'
 import { useAuth } from '@/hooks/use-auth'
 import {
@@ -16,7 +17,7 @@ import {
 } from '@/lib/notifications'
 import { relativeTime } from '@/lib/internal/core-utils'
 import type { RootStackParamList } from '@/navigation/types'
-import { colors } from '@/theme/colors'
+import { alfa, colors } from '@/theme/colors'
 import { fontSize, radius, spacing } from '@/theme/theme'
 
 const TYPE_ICON: Record<NotificationType, keyof typeof Ionicons.glyphMap> = {
@@ -85,6 +86,13 @@ export function NotificationsScreen() {
     if (!n.leida) handleMarcarLeida(n.id)
   }
 
+  function handleVerMensaje() {
+    if (!selected) return
+    const { enlace, servidorId } = selected
+    setSelected(null)
+    abrirEnlaceZion(enlace, servidorId).catch(() => {})
+  }
+
   function handleIrAlServidor() {
     if (!selected?.servidorId) return
     const serverId = selected.servidorId
@@ -117,7 +125,14 @@ export function NotificationsScreen() {
           <Text style={styles.detailMessage}>{selected.mensaje}</Text>
           <Text style={styles.detailMeta}>{relativeTime(selected.creadoAt)}</Text>
           <View style={styles.detailActions}>
-            {selected.servidorId ? (
+            {selected.enlace ? (
+              <Pressable style={styles.detailButton} onPress={handleVerMensaje}>
+                <Text style={styles.detailButtonLabel}>
+                  {selected.tipo === 'mensaje_privado' ? 'Abrir conversación' : 'Ver mensaje'}
+                </Text>
+              </Pressable>
+            ) : null}
+            {selected.servidorId && !selected.enlace ? (
               <Pressable style={styles.detailButton} onPress={handleIrAlServidor}>
                 <Text style={styles.detailButtonLabel}>Ir al servidor</Text>
               </Pressable>
@@ -201,7 +216,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   rowUnread: {
-    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    backgroundColor: alfa(colors.primary, 0.08),
   },
   rowIcon: {
     width: 32,

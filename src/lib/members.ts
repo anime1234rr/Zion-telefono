@@ -294,3 +294,238 @@ export async function listarMiembrosParaMencion(
       displayName: row.perfiles!.nombre_completo?.trim() || row.perfiles!.nombre_usuario,
     }))
 }
+
+export interface BannedMember {
+  id: string
+  userId: string
+  reason: string | null
+  createdAt: string
+  expiresAt: string | null
+  user: ChatUser
+}
+
+export async function actualizarRolDeMiembro(
+  membershipId: string,
+  rolId: string
+): Promise<void> {
+  const { error } = await supabase.rpc('actualizar_rol_miembro', {
+    p_miembro_id: membershipId,
+    p_nuevo_rol_id: rolId,
+  })
+
+  if (error) throw error
+}
+
+export async function agregarRolMiembro(membershipId: string, rolId: string): Promise<void> {
+  const { error } = await supabase.rpc('agregar_rol_miembro', {
+    p_miembro_id: membershipId,
+    p_rol_id: rolId,
+  })
+  if (error) throw error
+}
+
+export async function quitarRolMiembro(membershipId: string, rolId: string): Promise<void> {
+  const { error } = await supabase.rpc('quitar_rol_miembro', {
+    p_miembro_id: membershipId,
+    p_rol_id: rolId,
+  })
+  if (error) throw error
+}
+
+export async function expulsarMiembro(membershipId: string): Promise<void> {
+  const { error } = await supabase.rpc('expulsar_miembro', {
+    p_miembro_id: membershipId,
+  })
+
+  if (error) throw error
+}
+
+export async function banearMiembro(
+  membershipId: string,
+  razon?: string,
+  minutos?: number
+): Promise<void> {
+  const { error } = await supabase.rpc('banear_miembro', {
+    p_miembro_id: membershipId,
+    p_razon: razon ?? null,
+    p_minutos: minutos ?? null,
+  })
+
+  if (error) throw error
+}
+
+export async function desbanearMiembro(servidorId: string, usuarioId: string): Promise<void> {
+  const { error } = await supabase.rpc('desbanear_miembro', {
+    p_servidor_id: servidorId,
+    p_usuario_id: usuarioId,
+  })
+
+  if (error) throw error
+}
+
+interface BaneadoRow {
+  id: string
+  usuario_id: string
+  razon: string | null
+  creado_at: string
+  expira_at: string | null
+  nombre_usuario: string
+  nombre_completo: string | null
+  avatar_url: string | null
+}
+
+export async function listarBaneados(servidorId: string): Promise<BannedMember[]> {
+  const { data, error } = await supabase.rpc('listar_baneados', { p_servidor_id: servidorId })
+
+  if (error) throw error
+  return ((data ?? []) as BaneadoRow[]).map((row) => ({
+    id: row.id,
+    userId: row.usuario_id,
+    reason: row.razon,
+    createdAt: row.creado_at,
+    expiresAt: row.expira_at,
+    user: {
+      id: row.usuario_id,
+      name: row.nombre_completo?.trim() || row.nombre_usuario,
+      avatarUrl: row.avatar_url ?? undefined,
+      status: 'offline' as const,
+    },
+  }))
+}
+
+export async function silenciarMiembro(membershipId: string, minutos: number): Promise<void> {
+  const { error } = await supabase.rpc('silenciar_miembro', {
+    p_miembro_id: membershipId,
+    p_minutos: minutos,
+  })
+
+  if (error) throw error
+}
+
+export async function quitarSilencioMiembro(membershipId: string): Promise<void> {
+  const { error } = await supabase.rpc('quitar_silencio_miembro', {
+    p_miembro_id: membershipId,
+  })
+
+  if (error) throw error
+}
+
+export async function actualizarApodoMiembro(membershipId: string, apodo: string): Promise<void> {
+  const { error } = await supabase.rpc('actualizar_apodo_miembro', {
+    p_miembro_id: membershipId,
+    p_apodo: apodo,
+  })
+
+  if (error) throw error
+}
+
+export async function crearRolRapido(servidorId: string, nombre: string): Promise<ServerRole> {
+  const { data, error } = await supabase
+    .rpc('slash_crear_rol', { p_servidor_id: servidorId, p_nombre: nombre })
+    .single<RolRow>()
+
+  if (error) throw error
+  return mapRol(data)
+}
+
+export async function renombrarRolRapido(
+  servidorId: string,
+  rolId: string,
+  nombre: string
+): Promise<ServerRole> {
+  const { data, error } = await supabase
+    .rpc('slash_renombrar_rol', { p_servidor_id: servidorId, p_rol_id: rolId, p_nombre: nombre })
+    .single<RolRow>()
+
+  if (error) throw error
+  return mapRol(data)
+}
+
+export async function cambiarColorRolRapido(
+  servidorId: string,
+  rolId: string,
+  color: string
+): Promise<ServerRole> {
+  const { data, error } = await supabase
+    .rpc('slash_color_rol', { p_servidor_id: servidorId, p_rol_id: rolId, p_color: color })
+    .single<RolRow>()
+
+  if (error) throw error
+  return mapRol(data)
+}
+
+export async function asignarRolRapido(
+  servidorId: string,
+  usuarioObjetivoId: string,
+  rolId: string
+): Promise<void> {
+  const { error } = await supabase.rpc('slash_asignar_rol', {
+    p_servidor_id: servidorId,
+    p_usuario_objetivo_id: usuarioObjetivoId,
+    p_rol_id: rolId,
+  })
+  if (error) throw error
+}
+
+export async function kickearMiembroRapido(servidorId: string, usuarioObjetivoId: string): Promise<void> {
+  const { error } = await supabase.rpc('slash_kick', {
+    p_servidor_id: servidorId,
+    p_usuario_objetivo_id: usuarioObjetivoId,
+  })
+  if (error) throw error
+}
+
+export async function banearMiembroRapido(
+  servidorId: string,
+  usuarioObjetivoId: string,
+  razon?: string
+): Promise<void> {
+  const { error } = await supabase.rpc('slash_ban', {
+    p_servidor_id: servidorId,
+    p_usuario_objetivo_id: usuarioObjetivoId,
+    p_razon: razon?.trim() || null,
+  })
+  if (error) throw error
+}
+
+export async function banearMiembroTemporalRapido(
+  servidorId: string,
+  usuarioObjetivoId: string,
+  minutos: number,
+  razon?: string
+): Promise<void> {
+  const { error } = await supabase.rpc('slash_tempban', {
+    p_servidor_id: servidorId,
+    p_usuario_objetivo_id: usuarioObjetivoId,
+    p_minutos: minutos,
+    p_razon: razon?.trim() || null,
+  })
+  if (error) throw error
+}
+
+export async function silenciarMiembroRapido(
+  servidorId: string,
+  usuarioObjetivoId: string,
+  minutos: number
+): Promise<void> {
+  const { error } = await supabase.rpc('slash_mute', {
+    p_servidor_id: servidorId,
+    p_usuario_objetivo_id: usuarioObjetivoId,
+    p_minutos: minutos,
+  })
+  if (error) throw error
+}
+
+export async function advertirMiembroRapido(
+  servidorId: string,
+  usuarioObjetivoId: string,
+  razon: string
+): Promise<number> {
+  const { data, error } = await supabase.rpc('slash_advertir_miembro', {
+    p_servidor_id: servidorId,
+    p_usuario_objetivo_id: usuarioObjetivoId,
+    p_razon: razon,
+  })
+  if (error) throw error
+  return data as number
+}

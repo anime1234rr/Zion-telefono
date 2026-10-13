@@ -6,11 +6,17 @@ import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-n
 
 import { ScreenContainer } from '@/components/ScreenContainer'
 import { ChannelListItem } from '@/components/ChannelListItem'
+import { Avatar } from '@/components/Avatar'
 import { useAuth } from '@/hooks/use-auth'
 import { listarCanales, suscribirseACanalesDeServidor, UNCATEGORIZED_ID } from '@/lib/channels'
 import { listarServidores } from '@/lib/servers'
 import { listarCanalesNoLeidos } from '@/lib/read-state'
 import { contarMencionesNoLeidas } from '@/lib/notifications'
+import {
+  listarParticipantesDeVozDelServidor,
+  suscribirseAEstadosVozGlobal,
+  type VoiceParticipant,
+} from '@/lib/voice'
 import type { ChannelCategory, ChannelItem, ServerItem } from '@/lib/types'
 import type { RootStackParamList } from '@/navigation/types'
 import { colors } from '@/theme/colors'
@@ -28,6 +34,29 @@ export function ServerChannelsScreen() {
   const [categories, setCategories] = useState<ChannelCategory[]>([])
   const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set())
   const [mentionsPorCanal, setMentionsPorCanal] = useState<Map<string, number>>(new Map())
+  const [enVoz, setEnVoz] = useState<Map<string, VoiceParticipant[]>>(new Map())
+
+  const cargarVoz = useCallback(() => {
+    listarParticipantesDeVozDelServidor(serverId)
+      .then((participantes) => {
+        const mapa = new Map<string, VoiceParticipant[]>()
+        for (const p of participantes) {
+          mapa.set(p.canalId, [...(mapa.get(p.canalId) ?? []), p])
+        }
+        setEnVoz(mapa)
+      })
+      .catch(() => {})
+  }, [serverId])
+
+  useEffect(() => {
+    cargarVoz()
+    const dejarDeEscuchar = suscribirseAEstadosVozGlobal(cargarVoz)
+    const intervalo = setInterval(cargarVoz, 30_000)
+    return () => {
+      dejarDeEscuchar()
+      clearInterval(intervalo)
+    }
+  }, [cargarVoz])
 
   const cargarCanales = useCallback(() => {
     listarCanales(serverId)
@@ -93,9 +122,28 @@ export function ServerChannelsScreen() {
 
   const renderItem = useCallback(
     ({ item }: { item: ChannelItem }) => (
-      <ChannelListItem channel={item} onPress={() => handleSelectChannel(item)} />
+      <View>
+        <ChannelListItem channel={item} onPress={() => handleSelectChannel(item)} />
+        {item.type === 'voice'
+          ? (enVoz.get(item.id) ?? []).map((p) => (
+              <View key={p.user.id} style={styles.participante}>
+                <Avatar name={p.user.name} url={p.user.avatarUrl} size={22} />
+                <Text style={styles.participanteNombre} numberOfLines={1}>
+                  {p.user.name}
+                </Text>
+                {p.sharingScreen ? <Ionicons name="desktop-outline" size={13} color={colors.mutedForeground} /> : null}
+                {p.cameraOn ? <Ionicons name="videocam-outline" size={13} color={colors.mutedForeground} /> : null}
+                {p.deafened ? (
+                  <Ionicons name="volume-mute" size={13} color={colors.destructive} />
+                ) : p.muted ? (
+                  <Ionicons name="mic-off" size={13} color={colors.destructive} />
+                ) : null}
+              </View>
+            ))
+          : null}
+      </View>
     ),
-    [handleSelectChannel]
+    [handleSelectChannel, enVoz]
   )
 
   return (
@@ -135,6 +183,15 @@ export function ServerChannelsScreen() {
 }
 
 const styles = StyleSheet.create({
+  participante: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingLeft: spacing.xl + spacing.lg,
+    paddingRight: spacing.lg,
+    paddingVertical: 3,
+  },
+  participanteNombre: { flex: 1, color: colors.mutedForeground, fontSize: fontSize.sm },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

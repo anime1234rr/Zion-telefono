@@ -11,11 +11,16 @@ import { MessageComposer } from '@/components/MessageComposer'
 import { ImageViewerModal } from '@/components/ImageViewerModal'
 import { PromptModal } from '@/components/PromptModal'
 import { MessageActionsModal, type MessageActionItem } from '@/components/MessageActionsModal'
+import { ForwardMessageSheet } from '@/components/ForwardMessageSheet'
+import { alternarMensajeGuardado, estaGuardado } from '@/lib/saved-messages'
 import { EmojiPickerModal } from '@/components/EmojiPickerModal'
 import { PinnedMessagesModal } from '@/components/PinnedMessagesModal'
 import { SearchModal } from '@/components/SearchModal'
 import { NotificationBellButton } from '@/components/NotificationBellButton'
 import { UserProfileModal } from '@/components/UserProfileModal'
+import { SlashCommandSheet } from '@/components/SlashCommandSheet'
+import { showAppAlert } from '@/hooks/use-app-alert'
+import { useServerPermissions } from '@/hooks/use-server-permissions'
 import { useAuth } from '@/hooks/use-auth'
 import { useCurrentUsername } from '@/hooks/use-current-username'
 import { useServerExpresiones } from '@/hooks/use-server-expresiones'
@@ -32,7 +37,8 @@ import { marcarMencionesCanalLeidas } from '@/lib/notifications'
 import { listarMiembrosParaMencion, listarRolesDeServidor, type MentionableMember, type ServerRole } from '@/lib/members'
 import { parseFencedCode } from '@/lib/code-fence'
 import { crearHiloDeCanal } from '@/lib/threads'
-import { subirArchivoChat } from '@/lib/storage'
+import { SLASH_COMANDOS, tieneAlgunComandoDeSlash, type SlashCommandStep } from '@/lib/slash-commands'
+import { subirArchivoChat, subirNotaDeVoz } from '@/lib/storage'
 import { listarServidores } from '@/lib/servers'
 import { obtenerOCrearConversacion } from '@/lib/dms'
 import type { ChatMessage, ReplyPreview, ServerItem } from '@/lib/types'
@@ -58,6 +64,7 @@ export function ChannelChatScreen() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [profileUserId, setProfileUserId] = useState<string | null>(null)
   const [actionsMessage, setActionsMessage] = useState<ChatMessage | null>(null)
+  const [reenviando, setReenviando] = useState<ChatMessage | null>(null)
   const [reactingMessage, setReactingMessage] = useState<ChatMessage | null>(null)
   const [highlightMessageId, setHighlightMessageId] = useState<string | null>(
     route.params.highlightMessageId ?? null
@@ -67,6 +74,10 @@ export function ChannelChatScreen() {
   const [members, setMembers] = useState<MentionableMember[]>([])
   const [roles, setRoles] = useState<ServerRole[]>([])
   const currentUsername = useCurrentUsername()
+  const { isOwner, ownerId, hasPermission } = useServerPermissions(serverId, userId ?? undefined)
+  const puedeUsarComandos = tieneAlgunComandoDeSlash(isOwner, hasPermission)
+  const [comandosAbierto, setComandosAbierto] = useState(false)
+  const [pasoComando, setPasoComando] = useState<SlashCommandStep | null>(null)
   const { emojis, stickers } = useServerExpresiones(serverId)
   const customEmojis = useMemo(
     () => new Map([...emojis, ...stickers].map((e) => [e.nombre, e.url])),
@@ -142,6 +153,17 @@ export function ChannelChatScreen() {
   const handleSubmit = useCallback(
     async (text: string) => {
       if (!userId) return
+      const recortado = text.trim()
+      if (puedeUsarComandos && recortado.startsWith('/')) {
+        const comando = [...SLASH_COMANDOS]
+          .sort((a, b) => b.comando.length - a.comando.length)
+          .find((c) => recortado.toLowerCase().startsWith(c.comando))
+        if (comando || recortado === '/') {
+          setPasoComando(comando?.step ?? null)
+          setComandosAbierto(true)
+          return
+        }
+      }
       setSending(true)
       try {
         const parsed = parseFencedCode(text)
@@ -157,7 +179,7 @@ export function ChannelChatScreen() {
         setSending(false)
       }
     },
-    [channelId, replyingTo, userId]
+    [channelId, replyingTo, userId, puedeUsarComandos]
   )
 
   async function handleSendSticker(nombre: string) {
@@ -198,8 +220,29 @@ export function ChannelChatScreen() {
     }
   }
 
+  async function handleSendVoice(uri: string) {
+    if (!user) return
+    const { url } = await subirNotaDeVoz(channelId, uri)
+    const nuevo = await enviarMensaje(channelId, user.id, { content: '', attachment: { url, type: 'audio' } })
+    setMessages((prev) => (prev.some((m) => m.id === nuevo.id) ? prev : [...prev, nuevo]))
+  }
+
   function buildMessageActions(message: ChatMessage): MessageActionItem[] {
     const actions: MessageActionItem[] = [
+      {
+        key: 'save',
+        label: estaGuardado(message.id) ? 'Quitar de guardados' : 'Guardar',
+        icon: estaGuardado(message.id) ? 'bookmark' : 'bookmark-outline',
+        onPress: () => {
+          alternarMensajeGuardado(message, { scope: 'canal', serverId, serverName: server?.name ?? null, channelId, channelName }).catch(() => {})
+        },
+      },
+      {
+        key: 'forward',
+        label: 'Reenviar',
+        icon: 'arrow-redo-outline',
+        onPress: () => setReenviando(message),
+      },
       {
         key: 'reply',
         label: 'Responder',
@@ -285,6 +328,17 @@ export function ChannelChatScreen() {
         </Text>
         <View style={styles.headerActions}>
           <NotificationBellButton size={19} />
+          {puedeUsarComandos ? (
+            <Pressable
+              onPress={() => {
+                setPasoComando(null)
+                setComandosAbierto(true)
+              }}
+              hitSlop={8}
+            >
+              <Ionicons name="flash-outline" size={19} color={colors.foreground} />
+            </Pressable>
+          ) : null}
           <Pressable
             onPress={() =>
               navigation.navigate('ThreadList', { serverId, channelId, channelName })
@@ -329,6 +383,7 @@ export function ChannelChatScreen() {
           placeholder={`Mensaje en #${channelName}`}
           onSubmit={handleSubmit}
           onPickAttachment={handlePickAttachment}
+          onSendVoice={handleSendVoice}
           onSendSticker={handleSendSticker}
           replyingTo={replyingTo}
           onCancelReply={() => setReplyingTo(null)}
@@ -390,6 +445,26 @@ export function ChannelChatScreen() {
       />
 
       <ImageViewerModal uri={viewerUri} onClose={() => setViewerUri(null)} />
+      {userId ? (
+        <SlashCommandSheet
+          visible={comandosAbierto}
+          serverId={serverId}
+          ownerId={ownerId}
+          channelId={channelId}
+          currentUserId={userId}
+          isOwner={isOwner}
+          hasPermission={hasPermission}
+          pasoInicial={pasoComando}
+          onClose={() => setComandosAbierto(false)}
+          onResultado={(mensaje) => showAppAlert('Comando ejecutado', mensaje)}
+        />
+      ) : null}
+      <ForwardMessageSheet
+        message={reenviando}
+        sourceLabel={`#${channelName}`}
+        currentUserId={user?.id ?? ''}
+        onClose={() => setReenviando(null)}
+      />
     </ScreenContainer>
   )
 }

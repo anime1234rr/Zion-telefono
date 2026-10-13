@@ -75,3 +75,23 @@ export async function listarPlantillasConDetalle(): Promise<
     })),
   }))
 }
+
+const SIN_CATEGORIA = '__sin_categoria__'
+
+export function agruparCanalesPorCategoria(canales: PlantillaCanalPreview[]) {
+  const grupos: { categoria: string | null; canales: PlantillaCanalPreview[] }[] = []
+  const indicePorCategoria = new Map<string, number>()
+
+  for (const canal of canales) {
+    const clave = canal.categoria?.trim() || SIN_CATEGORIA
+    let indice = indicePorCategoria.get(clave)
+    if (indice === undefined) {
+      indice = grupos.length
+      indicePorCategoria.set(clave, indice)
+      grupos.push({ categoria: clave === SIN_CATEGORIA ? null : clave, canales: [] })
+    }
+    grupos[indice].canales.push(canal)
+  }
+
+  return grupos
+}

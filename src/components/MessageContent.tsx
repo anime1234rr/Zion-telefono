@@ -1,6 +1,6 @@
 import { Image, StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native'
 
-import { colors } from '@/theme/colors'
+import { alfa, colors } from '@/theme/colors'
 import { radius } from '@/theme/theme'
 import { EVERYONE_MENTION_PATTERN, MENTION_TOKEN_PATTERN } from '@/lib/mentions'
 
@@ -93,7 +93,7 @@ export function MessageContent({
 
 const styles = StyleSheet.create({
   mention: {
-    backgroundColor: 'rgba(99, 102, 241, 0.16)',
+    backgroundColor: alfa(colors.primary, 0.16),
     color: colors.primary,
     fontWeight: '600',
     borderRadius: radius.sm,

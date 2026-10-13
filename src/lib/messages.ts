@@ -3,7 +3,7 @@ import { uniqueId } from '@/lib/id'
 import { formatFencedCode, parseFencedCode } from '@/lib/code-fence'
 import { attachmentTypeToAdjuntoTipo, formatTimestamp, mapAdjunto, mapReacciones } from '@/lib/message-format'
 import { mapPerfilToChatUser, type PerfilRow } from '@/lib/profiles'
-import type { ChatAttachment, ChatMessage, CodeBlock, ForwardedFrom, ReplyPreview } from '@/lib/types'
+import type { ChatAttachment, ChatMessage, CodeBlock, ForwardedFrom, MessageEmbed, ReplyPreview } from '@/lib/types'
 
 const MENSAJE_SELECT =
   '*, perfiles!mensajes_usuario_id_fkey(*), mensaje_respondido:respuesta_a_id(id, contenido, tipo_mensaje, perfiles!mensajes_usuario_id_fkey(*)), reacciones_mensajes(usuario_id, emoji)'
@@ -28,6 +28,7 @@ interface MensajeRow {
   reenviado_de_autor_nombre: string | null
   reenviado_de_origen: string | null
   fijado: boolean
+  embed: MessageEmbed | null
   perfiles: PerfilRow | null
   mensaje_respondido: MensajeRespondidoRow | null
   reacciones_mensajes: { usuario_id: string; emoji: string }[] | null
@@ -70,6 +71,7 @@ function mapMensajeRow(row: MensajeRow): ChatMessage {
     timestamp: formatTimestamp(row.creado_at),
     createdAt: row.creado_at,
     attachment: mapAdjunto(row.adjunto_url, row.adjunto_tipo),
+    embed: row.embed ?? undefined,
     editedAt: row.editado_en ?? undefined,
     replyTo: mapReplyPreview(row.mensaje_respondido),
     forwardedFrom: mapForwardedFrom(row),
@@ -268,4 +270,13 @@ export function suscribirseACanal(canalId: string, handlers: SuscribirseACanalHa
   return () => {
     supabase.removeChannel(channel)
   }
+}
+
+export async function limpiarMensajesRapido(canalId: string, cantidad: number): Promise<number> {
+  const { data, error } = await supabase.rpc('slash_limpiar_mensajes', {
+    p_canal_id: canalId,
+    p_cantidad: cantidad,
+  })
+  if (error) throw error
+  return data as number
 }

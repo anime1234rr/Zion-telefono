@@ -11,6 +11,8 @@ import { MessageComposer } from '@/components/MessageComposer'
 import { ImageViewerModal } from '@/components/ImageViewerModal'
 import { PromptModal } from '@/components/PromptModal'
 import { MessageActionsModal, type MessageActionItem } from '@/components/MessageActionsModal'
+import { ForwardMessageSheet } from '@/components/ForwardMessageSheet'
+import { alternarMensajeGuardado, estaGuardado } from '@/lib/saved-messages'
 import { EmojiPickerModal } from '@/components/EmojiPickerModal'
 import { UserProfileModal } from '@/components/UserProfileModal'
 import { useAuth } from '@/hooks/use-auth'
@@ -25,7 +27,7 @@ import {
   suscribirseACanal,
 } from '@/lib/messages'
 import { obtenerOCrearConversacion } from '@/lib/dms'
-import { subirArchivoChat } from '@/lib/storage'
+import { subirArchivoChat, subirNotaDeVoz } from '@/lib/storage'
 import { listarMiembrosParaMencion, listarRolesDeServidor, type MentionableMember, type ServerRole } from '@/lib/members'
 import { parseFencedCode } from '@/lib/code-fence'
 import type { ChatMessage, ReplyPreview } from '@/lib/types'
@@ -48,6 +50,7 @@ export function ThreadChatScreen() {
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null)
   const [profileUserId, setProfileUserId] = useState<string | null>(null)
   const [actionsMessage, setActionsMessage] = useState<ChatMessage | null>(null)
+  const [reenviando, setReenviando] = useState<ChatMessage | null>(null)
   const [reactingMessage, setReactingMessage] = useState<ChatMessage | null>(null)
   const [viewerUri, setViewerUri] = useState<string | null>(null)
   const [members, setMembers] = useState<MentionableMember[]>([])
@@ -146,8 +149,29 @@ export function ThreadChatScreen() {
     navigation.navigate('DMChat', { conversationId })
   }
 
+  async function handleSendVoice(uri: string) {
+    if (!user) return
+    const { url } = await subirNotaDeVoz(threadId, uri)
+    const nuevo = await enviarMensaje(threadId, user.id, { content: '', attachment: { url, type: 'audio' } })
+    setMessages((prev) => (prev.some((m) => m.id === nuevo.id) ? prev : [...prev, nuevo]))
+  }
+
   function buildMessageActions(message: ChatMessage): MessageActionItem[] {
     const actions: MessageActionItem[] = [
+      {
+        key: 'save',
+        label: estaGuardado(message.id) ? 'Quitar de guardados' : 'Guardar',
+        icon: estaGuardado(message.id) ? 'bookmark' : 'bookmark-outline',
+        onPress: () => {
+          alternarMensajeGuardado(message, { scope: 'canal', serverId, channelId: threadId, channelName: threadName }).catch(() => {})
+        },
+      },
+      {
+        key: 'forward',
+        label: 'Reenviar',
+        icon: 'arrow-redo-outline',
+        onPress: () => setReenviando(message),
+      },
       {
         key: 'reply',
         label: 'Responder',
@@ -225,6 +249,7 @@ export function ThreadChatScreen() {
             placeholder={`Mensaje en ${threadName}`}
             onSubmit={handleSubmit}
             onPickAttachment={handlePickAttachment}
+            onSendVoice={handleSendVoice}
             onSendSticker={handleSendSticker}
             replyingTo={replyingTo}
             onCancelReply={() => setReplyingTo(null)}
@@ -271,6 +296,12 @@ export function ThreadChatScreen() {
       />
 
       <ImageViewerModal uri={viewerUri} onClose={() => setViewerUri(null)} />
+      <ForwardMessageSheet
+        message={reenviando}
+        sourceLabel={`hilo ${threadName}`}
+        currentUserId={user?.id ?? ''}
+        onClose={() => setReenviando(null)}
+      />
     </ScreenContainer>
   )
 }

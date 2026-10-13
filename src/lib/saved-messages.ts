@@ -127,3 +127,7 @@ export function useCantidadMensajesGuardados(): number {
     () => 0
   )
 }
+
+export function estaGuardado(messageId: string): boolean {
+  return ids.has(messageId)
+}

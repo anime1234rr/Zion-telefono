@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -15,11 +15,13 @@ import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import { ScreenContainer } from '@/components/ScreenContainer'
+import { PersonasExplorar } from '@/components/PersonasExplorar'
 import { showAppAlert } from '@/hooks/use-app-alert'
 import { explorarComunidades, type CommunityListing } from '@/lib/explore'
 import { unirseAServidor } from '@/lib/servers'
+import { suscribirseAExplorar } from '@/lib/realtime-avisos'
 import type { RootStackParamList } from '@/navigation/types'
-import { colors } from '@/theme/colors'
+import { alfa, colors } from '@/theme/colors'
 import { fontSize, radius, spacing } from '@/theme/theme'
 
 const CATEGORIAS: { id: string; label: string; palabras: string[] }[] = [
@@ -108,9 +110,17 @@ function CommunityCard({
           </View>
         </View>
 
-        <Text style={styles.cardTitle} numberOfLines={1}>
-          {community.name}
-        </Text>
+        <View style={styles.titleRow}>
+          <Text style={[styles.cardTitle, styles.titleText]} numberOfLines={1}>
+            {community.name}
+          </Text>
+          {community.featured ? (
+            <View style={styles.featured}>
+              <Ionicons name="sparkles" size={11} color={colors.primary} />
+              <Text style={styles.featuredText}>Destacado</Text>
+            </View>
+          ) : null}
+        </View>
         <Text style={styles.cardDesc} numberOfLines={2}>
           {community.description?.trim() || 'Esta comunidad todavía no tiene descripción.'}
         </Text>
@@ -138,12 +148,29 @@ function CommunityCard({
 
 export function ExploreScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+  const [modo, setModo] = useState<'servidores' | 'personas'>('servidores')
   const [query, setQuery] = useState('')
+  const [queryPersonas, setQueryPersonas] = useState('')
   const [categoria, setCategoria] = useState('todos')
   const [comunidades, setComunidades] = useState<CommunityListing[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(false)
   const [uniendo, setUniendo] = useState<string | null>(null)
+  const queryRef = useRef(query)
+
+  useEffect(() => {
+    queryRef.current = query
+  }, [query])
+
+  useEffect(
+    () =>
+      suscribirseAExplorar(() => {
+        explorarComunidades(queryRef.current)
+          .then(setComunidades)
+          .catch(() => {})
+      }),
+    []
+  )
 
   useEffect(() => {
     let cancelado = false
@@ -202,92 +229,153 @@ export function ExploreScreen() {
     <ScreenContainer>
       <View style={styles.header}>
         <Ionicons name="compass-outline" size={20} color={colors.primary} />
-        <Text style={styles.headerTitle}>Explorar comunidades</Text>
+        <Text style={styles.headerTitle}>Explorar</Text>
+      </View>
+
+      <View style={styles.modeTabs}>
+        {(
+          [
+            ['servidores', 'Servidores', 'server-outline'],
+            ['personas', 'Personas', 'people-outline'],
+          ] as const
+        ).map(([valor, label, icon]) => (
+          <Pressable
+            key={valor}
+            style={[styles.modeTab, modo === valor && styles.modeTabActive]}
+            onPress={() => setModo(valor)}
+          >
+            <Ionicons
+              name={icon}
+              size={15}
+              color={modo === valor ? colors.foreground : colors.mutedForeground}
+            />
+            <Text style={[styles.modeTabText, modo === valor && styles.modeTabTextActive]}>{label}</Text>
+          </Pressable>
+        ))}
       </View>
 
       <View style={styles.searchWrap}>
         <Ionicons name="search-outline" size={16} color={colors.mutedForeground} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar por nombre o tema"
+          placeholder={modo === 'servidores' ? 'Buscar por nombre o tema' : 'Buscar personas por nombre'}
           placeholderTextColor={colors.mutedForeground}
-          value={query}
-          onChangeText={setQuery}
+          value={modo === 'servidores' ? query : queryPersonas}
+          onChangeText={modo === 'servidores' ? setQuery : setQueryPersonas}
         />
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.chipScroll}
-        contentContainerStyle={styles.chipRow}
-      >
-        {CATEGORIAS.map((cat) => (
-          <Pressable
-            key={cat.id}
-            style={[styles.chip, categoria === cat.id && styles.chipActive]}
-            onPress={() => setCategoria(cat.id)}
-          >
-            <Text style={[styles.chipText, categoria === cat.id && styles.chipTextActive]}>
-              {cat.label}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-
-      {cargando ? (
-        <View style={styles.centered}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
-      ) : error ? (
-        <View style={styles.centered}>
-          <Ionicons name="compass-outline" size={28} color={colors.mutedForeground} />
-          <Text style={styles.emptyText}>No se pudieron cargar las comunidades.</Text>
-        </View>
-      ) : visibles.length === 0 ? (
-        <View style={styles.centered}>
-          <View style={styles.emptyIcon}>
-            <Ionicons name="telescope-outline" size={30} color={colors.mutedForeground} />
-          </View>
-          <Text style={styles.emptyTitle}>
-            {hayFiltros ? 'Nada por acá todavía' : 'Todavía no hay comunidades públicas'}
-          </Text>
-          <Text style={styles.emptyText}>
-            {hayFiltros
-              ? 'Probá con otro tema o mirá otras categorías.'
-              : 'Cuando alguien active la comunidad de su servidor, va a aparecer acá.'}
-          </Text>
-          {hayFiltros ? (
-            <Pressable
-              style={styles.clearBtn}
-              onPress={() => {
-                setQuery('')
-                setCategoria('todos')
-              }}
-            >
-              <Text style={styles.clearBtnText}>Limpiar filtros</Text>
-            </Pressable>
-          ) : null}
-        </View>
+      {modo === 'personas' ? (
+        <PersonasExplorar query={queryPersonas} />
       ) : (
-        <FlatList
-          data={visibles}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <CommunityCard
-              community={item}
-              joining={uniendo === item.id}
-              onAction={() => handleAccion(item)}
+        <>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.chipScroll}
+            contentContainerStyle={styles.chipRow}
+          >
+            {CATEGORIAS.map((cat) => (
+              <Pressable
+                key={cat.id}
+                style={[styles.chip, categoria === cat.id && styles.chipActive]}
+                onPress={() => setCategoria(cat.id)}
+              >
+                <Text style={[styles.chipText, categoria === cat.id && styles.chipTextActive]}>
+                  {cat.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          {cargando ? (
+            <View style={styles.centered}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          ) : error ? (
+            <View style={styles.centered}>
+              <Ionicons name="compass-outline" size={28} color={colors.mutedForeground} />
+              <Text style={styles.emptyText}>No se pudieron cargar las comunidades.</Text>
+            </View>
+          ) : visibles.length === 0 ? (
+            <View style={styles.centered}>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="telescope-outline" size={30} color={colors.mutedForeground} />
+              </View>
+              <Text style={styles.emptyTitle}>
+                {hayFiltros ? 'Nada por acá todavía' : 'Todavía no hay comunidades públicas'}
+              </Text>
+              <Text style={styles.emptyText}>
+                {hayFiltros
+                  ? 'Probá con otro tema o mirá otras categorías.'
+                  : 'Cuando alguien active la comunidad de su servidor, va a aparecer acá.'}
+              </Text>
+              {hayFiltros ? (
+                <Pressable
+                  style={styles.clearBtn}
+                  onPress={() => {
+                    setQuery('')
+                    setCategoria('todos')
+                  }}
+                >
+                  <Text style={styles.clearBtnText}>Limpiar filtros</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : (
+            <FlatList
+              data={visibles}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.list}
+              renderItem={({ item }) => (
+                <CommunityCard
+                  community={item}
+                  joining={uniendo === item.id}
+                  onAction={() => handleAccion(item)}
+                />
+              )}
             />
           )}
-        />
+        </>
       )}
     </ScreenContainer>
   )
 }
 
 const styles = StyleSheet.create({
+  modeTabs: {
+    flexDirection: 'row',
+    gap: 4,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    padding: 4,
+    borderRadius: radius.md,
+    backgroundColor: colors.secondary,
+  },
+  modeTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+  },
+  modeTabActive: { backgroundColor: colors.background },
+  modeTabText: { color: colors.mutedForeground, fontSize: fontSize.sm, fontWeight: '600' },
+  modeTabTextActive: { color: colors.foreground },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  titleText: { flexShrink: 1 },
+  featured: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: alfa(colors.primary, 0.15),
+    borderRadius: radius.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  featuredText: { color: colors.primary, fontSize: 10, fontWeight: '700' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -339,7 +427,7 @@ const styles = StyleSheet.create({
   },
   chipActive: {
     borderColor: colors.primary,
-    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    backgroundColor: alfa(colors.primary, 0.12),
   },
   chipText: {
     color: colors.mutedForeground,
@@ -362,7 +450,7 @@ const styles = StyleSheet.create({
   },
   banner: {
     height: 88,
-    backgroundColor: 'rgba(99, 102, 241, 0.18)',
+    backgroundColor: alfa(colors.primary, 0.18),
   },
   bannerImg: {
     width: '100%',

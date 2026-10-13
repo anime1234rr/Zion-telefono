@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as Clipboard from 'expo-clipboard'
-import { useNavigation } from '@react-navigation/native'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import { ScreenContainer } from '@/components/ScreenContainer'
@@ -16,6 +16,7 @@ import {
   type SecurityNotificationPrefs,
 } from '@/lib/profiles'
 import {
+  avisarCambioMfa,
   confirmarEnrolamientoMfa,
   iniciarEnrolamientoMfa,
   listarFactoresMfa,
@@ -108,7 +109,7 @@ export function SecurityScreen() {
       .finally(() => setMfaLoading(false))
   }, [])
 
-  useEffect(() => cargarMfa(), [cargarMfa])
+  useFocusEffect(cargarMfa)
 
   const isDirty =
     !!saved && !!draft && OPCIONES.some((opcion) => saved[opcion.clave] !== draft[opcion.clave])
@@ -168,7 +169,7 @@ export function SecurityScreen() {
   async function empezarMfa() {
     setMfaBusy(true)
     try {
-      setEnrolling(await iniciarEnrolamientoMfa('Zion móvil'))
+      setEnrolling(await iniciarEnrolamientoMfa('App de autenticación'))
       setMfaCode('')
     } catch (err) {
       showAppAlert('No se pudo iniciar', getErrorMessage(err))
@@ -193,6 +194,7 @@ export function SecurityScreen() {
       await confirmarEnrolamientoMfa(enrolling.factorId, mfaCode)
       setEnrolling(null)
       cargarMfa()
+      avisarCambioMfa()
       showAppAlert('Verificación en dos pasos activada')
     } catch (err) {
       showAppAlert('Código incorrecto', getErrorMessage(err))
@@ -202,7 +204,7 @@ export function SecurityScreen() {
   }
 
   function quitarMfa(f: MfaFactor) {
-    showAppAlert('Quitar 2FA', '¿Desactivar la verificación en dos pasos de este dispositivo?', [
+    showAppAlert('Quitar 2FA', '¿Desactivar la verificación en dos pasos? Se quita de tu cuenta en todos tus dispositivos.', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Quitar',
@@ -211,6 +213,7 @@ export function SecurityScreen() {
           try {
             await quitarFactorMfa(f.id)
             cargarMfa()
+            avisarCambioMfa()
           } catch (err) {
             showAppAlert('Error', getErrorMessage(err))
           }

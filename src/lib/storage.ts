@@ -82,7 +82,7 @@ export async function subirExpresionServidor(servidorId: string, file: PickedFil
   return supabase.storage.from('iconos_servidores').getPublicUrl(path).data.publicUrl
 }
 
-const CHAT_MAX_SIZE_BYTES = 50 * 1024 * 1024
+const CHAT_MAX_SIZE_BYTES = 15 * 1024 * 1024
 const CHAT_MIME_A_TIPO: Record<string, 'imagen' | 'video'> = {
   'image/jpeg': 'imagen',
   'image/png': 'imagen',
@@ -99,7 +99,7 @@ function assertArchivoChatValido(file: PickedFile): 'imagen' | 'video' {
     throw new Error('Solo se pueden adjuntar imágenes (jpeg, png, gif, webp) o videos (mp4, webm, mov).')
   }
   if (file.size !== undefined && file.size > CHAT_MAX_SIZE_BYTES) {
-    throw new Error('El archivo no puede pesar más de 50 MB.')
+    throw new Error('El archivo no puede pesar más de 15 MB.')
   }
   return tipo
 }
@@ -126,7 +126,7 @@ export async function subirArchivoChat(
 }
 
 const FONDO_MAX_IMAGEN_BYTES = 10 * 1024 * 1024
-const FONDO_MAX_VIDEO_BYTES = 30 * 1024 * 1024
+const FONDO_MAX_VIDEO_BYTES = 10 * 1024 * 1024
 
 const FONDO_MIME_A_TIPO: Record<string, 'imagen' | 'video'> = {
   'image/jpeg': 'imagen',
@@ -135,13 +135,12 @@ const FONDO_MIME_A_TIPO: Record<string, 'imagen' | 'video'> = {
   'image/webp': 'imagen',
   'video/mp4': 'video',
   'video/webm': 'video',
-  'video/quicktime': 'video',
 }
 
 function assertFondoAppValido(file: PickedFile): 'imagen' | 'video' {
   const tipo = FONDO_MIME_A_TIPO[file.type]
   if (!tipo) {
-    throw new Error('Solo se pueden usar imágenes (jpeg, png, gif, webp) o videos (mp4, webm, mov).')
+    throw new Error('Solo se pueden usar imágenes (jpeg, png, gif, webp) o videos (mp4, webm).')
   }
   const maxBytes = tipo === 'video' ? FONDO_MAX_VIDEO_BYTES : FONDO_MAX_IMAGEN_BYTES
   if (file.size !== undefined && file.size > maxBytes) {
@@ -169,4 +168,19 @@ export async function subirFondoApp(
 
   const url = supabase.storage.from('app-backgrounds').getPublicUrl(path).data.publicUrl
   return { url, tipo }
+}
+
+export async function subirNotaDeVoz(destinoId: string, uri: string): Promise<{ url: string; tipo: 'audio' }> {
+  const buffer = await leerComoArrayBuffer(uri)
+  if (buffer.byteLength > CHAT_MAX_SIZE_BYTES) {
+    throw new Error('La nota de voz no puede pesar más de 15 MB.')
+  }
+  const path = `chat/${destinoId}/${uniqueId()}.m4a`
+  const { error } = await supabase.storage.from('archivos-chat').upload(path, buffer, {
+    cacheControl: '3600',
+    upsert: false,
+    contentType: 'audio/mp4',
+  })
+  if (error) throw error
+  return { url: supabase.storage.from('archivos-chat').getPublicUrl(path).data.publicUrl, tipo: 'audio' }
 }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "305142450096",
+    "project_id": "zion-b2960",
+    "storage_bucket": "zion-b2960.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:305142450096:android:6f348aeea5767933a6b875",
+        "android_client_info": {
+          "package_name": "com.lunayanet.zion"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDr2NJ6OQMFuOG2fTCqj99EMcQm43aUDnM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

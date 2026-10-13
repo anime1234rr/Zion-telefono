@@ -60,6 +60,21 @@ export interface ChatAttachment {
   type: 'image' | 'video' | 'audio'
 }
 
+export interface MessageEmbedField {
+  name: string
+  value: string
+}
+
+export interface MessageEmbed {
+  title?: string
+  description?: string
+  url?: string
+  color?: string
+  imageUrl?: string
+  footer?: string
+  fields?: MessageEmbedField[]
+}
+
 export interface MessageReaction {
   emoji: string
   userIds: string[]
@@ -84,6 +99,7 @@ export interface ChatMessage {
   content?: string
   code?: CodeBlock
   attachment?: ChatAttachment
+  embed?: MessageEmbed
   editedAt?: string
   replyTo?: ReplyPreview
   forwardedFrom?: ForwardedFrom

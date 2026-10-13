@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import { Avatar } from '@/components/Avatar'
+import { UserBadge } from '@/components/UserBadge'
 import {
   aceptarSolicitudAmistad,
   enviarSolicitudAmistad,
@@ -134,7 +135,10 @@ export function UserProfileModal({
                   />
                 </View>
 
-                <Text style={styles.name}>{profile.nombreCompleto || profile.nombreUsuario}</Text>
+                <View style={styles.nameRow}>
+                  <Text style={styles.name}>{profile.nombreCompleto || profile.nombreUsuario}</Text>
+                  <UserBadge userId={profile.id} size={16} />
+                </View>
                 <Text style={styles.username}>
                   @{profile.nombreUsuario} · {statusLabel[profile.status]}
                 </Text>
@@ -190,6 +194,23 @@ export function UserProfileModal({
                 </View>
 
                 {friendRequestError ? <Text style={styles.error}>{friendRequestError}</Text> : null}
+
+                {!isOwnProfile ? (
+                  <Pressable
+                    style={styles.reportButton}
+                    hitSlop={8}
+                    onPress={() => {
+                      onClose()
+                      navigation.navigate('ReportUser', {
+                        userId: userId as string,
+                        userName: profile.nombreCompleto || profile.nombreUsuario,
+                      })
+                    }}
+                  >
+                    <Ionicons name="flag-outline" size={14} color={colors.mutedForeground} />
+                    <Text style={styles.reportLabel}>Reportar usuario</Text>
+                  </Pressable>
+                ) : null}
               </View>
             </ErrorBoundary>
           ) : null}
@@ -200,6 +221,16 @@ export function UserProfileModal({
 }
 
 const styles = StyleSheet.create({
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  reportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: spacing.md,
+    alignSelf: 'center',
+  },
+  reportLabel: { color: colors.mutedForeground, fontSize: fontSize.xs },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',

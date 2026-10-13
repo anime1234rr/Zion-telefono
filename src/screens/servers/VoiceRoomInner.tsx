@@ -6,7 +6,7 @@ import { ScreenContainer } from '@/components/ScreenContainer'
 import { Avatar } from '@/components/Avatar'
 import { useAuth } from '@/hooks/use-auth'
 import { useVoiceSession } from '@/hooks/use-voice-session'
-import { colors } from '@/theme/colors'
+import { alfa, colors } from '@/theme/colors'
 import { fontSize, radius, spacing } from '@/theme/theme'
 
 export function VoiceRoomInner({
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.secondary,
   },
   controlButtonActive: {
-    backgroundColor: 'rgba(239, 68, 68, 0.16)',
+    backgroundColor: alfa(colors.destructive, 0.16),
   },
   leaveButton: {
     backgroundColor: colors.destructive,

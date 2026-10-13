@@ -5,16 +5,22 @@ import { InicioScreen } from '@/screens/home/InicioScreen'
 import { ServerListScreen } from '@/screens/servers/ServerListScreen'
 import { ExploreScreen } from '@/screens/servers/ExploreScreen'
 import type { MainTabParamList } from '@/navigation/types'
-import { colors } from '@/theme/colors'
+import { alfa, colors } from '@/theme/colors'
+import { useAppBackground } from '@/lib/app-background'
 
 const Tab = createBottomTabNavigator<MainTabParamList>()
 
 export function MainTabs() {
+  const fondo = useAppBackground()
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { backgroundColor: colors.background, borderTopColor: colors.border },
+        sceneStyle: fondo ? { backgroundColor: 'transparent' } : undefined,
+        tabBarStyle: {
+          backgroundColor: fondo ? alfa(colors.background, 0.85) : colors.background,
+          borderTopColor: colors.border,
+        },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
       }}

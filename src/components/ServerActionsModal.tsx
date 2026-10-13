@@ -13,7 +13,7 @@ import {
   type ServerAlertLevel,
 } from '@/lib/server-notification-prefs'
 import type { ServerItem } from '@/lib/types'
-import { colors } from '@/theme/colors'
+import { alfa, colors } from '@/theme/colors'
 import { fontSize, radius, spacing } from '@/theme/theme'
 
 const NIVELES: { value: ServerAlertLevel; label: string }[] = [
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   },
   segmentActive: {
     borderColor: colors.primary,
-    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    backgroundColor: alfa(colors.primary, 0.12),
   },
   segmentDisabled: {
     opacity: 0.4,

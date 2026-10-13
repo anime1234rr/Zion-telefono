@@ -6,6 +6,7 @@ import {
   RTCSessionDescription,
 } from 'react-native-webrtc'
 
+import { getAppSettings } from '@/lib/app-settings'
 import { supabase } from '@/lib/supabase'
 
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
@@ -199,5 +200,12 @@ export class VoiceWebRtcSession {
 }
 
 export function crearMicStream(): Promise<MediaStream> {
-  return mediaDevices.getUserMedia({ audio: true })
+  const { echoCancellation, noiseSuppression, autoGainControl } = getAppSettings()
+  const audio = {
+    googEchoCancellation: String(echoCancellation),
+    googNoiseSuppression: String(noiseSuppression),
+    googAutoGainControl: String(autoGainControl),
+    googHighpassFilter: String(noiseSuppression),
+  }
+  return mediaDevices.getUserMedia({ audio } as unknown as Parameters<typeof mediaDevices.getUserMedia>[0])
 }

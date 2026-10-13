@@ -1,13 +1,23 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { AppState } from 'react-native'
 import type { Session } from '@supabase/supabase-js'
 
-import { supabase } from '@/lib/supabase'
+import { alRequerirMfa, supabase } from '@/lib/supabase'
 import { AuthContext, type PendingAuthAction } from '@/lib/auth-context-core'
+import { necesitaVerificacionMfa, suscribirseACambiosMfa } from '@/lib/mfa'
+import { desregistrarPush } from '@/lib/push'
+
+const MFA_RECHECK_MS = 60_000
+
+type MfaStatus = 'unknown' | 'ok' | 'required'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [pendingAuthAction, setPendingAuthAction] = useState<PendingAuthAction>(null)
+  const [mfaStatus, setMfaStatus] = useState<MfaStatus>('unknown')
+  const userId = session?.user.id ?? null
+  const accessToken = session?.access_token ?? null
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -29,7 +39,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.subscription.unsubscribe()
   }, [])
 
+  const refreshMfa = useCallback(
+    () =>
+      necesitaVerificacionMfa().then(
+        (requerida) => setMfaStatus(requerida ? 'required' : 'ok'),
+        () => setMfaStatus((prev) => (prev === 'unknown' ? 'ok' : prev))
+      ),
+    []
+  )
+
+  const [mfaUserId, setMfaUserId] = useState<string | null>(null)
+  if (mfaUserId !== userId) {
+    setMfaUserId(userId)
+    setMfaStatus('unknown')
+  }
+
+  useEffect(() => {
+    if (!accessToken) return
+    necesitaVerificacionMfa().then(
+      (requerida) => setMfaStatus(requerida ? 'required' : 'ok'),
+      () => setMfaStatus((prev) => (prev === 'unknown' ? 'ok' : prev))
+    )
+  }, [accessToken])
+
+  useEffect(() => {
+    if (!userId) return
+    const unsubscribe = suscribirseACambiosMfa(userId, refreshMfa)
+    const dejarDeEscucharApi = alRequerirMfa(refreshMfa)
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refreshMfa()
+    })
+    const interval = setInterval(refreshMfa, MFA_RECHECK_MS)
+    return () => {
+      sub.remove()
+      clearInterval(interval)
+      unsubscribe()
+      dejarDeEscucharApi()
+    }
+  }, [userId, refreshMfa])
+
   async function signOut() {
+    await desregistrarPush().catch(() => {})
     await supabase.auth.signOut()
   }
 
@@ -38,7 +88,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         session,
         user: session?.user ?? null,
-        loading,
+        loading: loading || (!!userId && mfaStatus === 'unknown'),
+        mfaRequired: !!userId && mfaStatus === 'required',
+        refreshMfa,
         signOut,
         pendingAuthAction,
         setPendingAuthAction,

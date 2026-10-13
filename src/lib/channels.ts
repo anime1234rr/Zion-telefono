@@ -30,6 +30,13 @@ export function suscribirseACanalesDeServidor(
       },
       () => onCambio()
     )
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'permisos_canal_rol' }, () => onCambio())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'miembros_roles' }, () => onCambio())
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'roles_servidor', filter: `servidor_id=eq.${servidorId}` },
+      () => onCambio()
+    )
     .subscribe()
 
   return () => {

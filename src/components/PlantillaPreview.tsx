@@ -3,33 +3,13 @@ import { Ionicons } from '@expo/vector-icons'
 
 import { colors } from '@/theme/colors'
 import { fontSize, radius, spacing } from '@/theme/theme'
-import type { PlantillaCanalPreview, PlantillaServidorDetalle } from '@/lib/templates'
+import { agruparCanalesPorCategoria, type PlantillaServidorDetalle } from '@/lib/templates'
 
 const iconByType: Record<string, keyof typeof Ionicons.glyphMap> = {
   texto: 'chatbubble-outline',
   voz: 'volume-medium-outline',
   codigo: 'code-slash-outline',
   anuncios: 'megaphone-outline',
-}
-
-const SIN_CATEGORIA = '__sin_categoria__'
-
-function agruparCanalesPorCategoria(canales: PlantillaCanalPreview[]) {
-  const grupos: { categoria: string | null; canales: PlantillaCanalPreview[] }[] = []
-  const indicePorCategoria = new Map<string, number>()
-
-  for (const canal of canales) {
-    const clave = canal.categoria?.trim() || SIN_CATEGORIA
-    let indice = indicePorCategoria.get(clave)
-    if (indice === undefined) {
-      indice = grupos.length
-      indicePorCategoria.set(clave, indice)
-      grupos.push({ categoria: clave === SIN_CATEGORIA ? null : clave, canales: [] })
-    }
-    grupos[indice].canales.push(canal)
-  }
-
-  return grupos
 }
 
 export function PlantillaPreview({ plantilla }: { plantilla: PlantillaServidorDetalle }) {

@@ -138,6 +138,11 @@ export function ServerSettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>MODERACIÓN</Text>
           <SettingsRow
+            icon="people-outline"
+            label="Personas y baneos"
+            onPress={() => navigation.navigate('ServerMembers', { serverId })}
+          />
+          <SettingsRow
             icon="shield-checkmark-outline"
             label="Verificación, retención y AutoMod"
             onPress={() => navigation.navigate('ServerModeration', { serverId })}

@@ -10,6 +10,8 @@ export interface AuthContextValue {
   session: Session | null
   user: User | null
   loading: boolean
+  mfaRequired: boolean
+  refreshMfa: () => Promise<void>
   signOut: () => Promise<void>
   pendingAuthAction: PendingAuthAction
   setPendingAuthAction: (action: PendingAuthAction) => void

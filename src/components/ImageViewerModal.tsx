@@ -7,6 +7,7 @@ import * as MediaLibrary from 'expo-media-library'
 
 import { showAppAlert } from '@/hooks/use-app-alert'
 import { spacing } from '@/theme/theme'
+import { alfa, colors } from '@/theme/colors'
 
 export function ImageViewerModal({
   uri,
@@ -114,7 +115,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: alfa(colors.foreground, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },

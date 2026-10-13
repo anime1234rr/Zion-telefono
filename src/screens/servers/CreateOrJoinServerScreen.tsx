@@ -14,11 +14,12 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import { ScreenContainer } from '@/components/ScreenContainer'
 import { PlantillaPreview } from '@/components/PlantillaPreview'
+import { PlantillaServidorPreview } from '@/components/PlantillaServidorPreview'
 import { crearServidor, unirseAServidor } from '@/lib/servers'
 import { listarPlantillasConDetalle, type PlantillaServidorDetalle } from '@/lib/templates'
 import { getErrorMessage } from '@/lib/utils'
 import type { RootStackParamList } from '@/navigation/types'
-import { colors } from '@/theme/colors'
+import { alfa, colors } from '@/theme/colors'
 import { fontSize, radius, spacing } from '@/theme/theme'
 
 type Mode = 'create' | 'join'
@@ -32,6 +33,7 @@ export function CreateOrJoinServerScreen() {
   const [error, setError] = useState<string | null>(null)
   const [plantillas, setPlantillas] = useState<PlantillaServidorDetalle[]>([])
   const [plantillaId, setPlantillaId] = useState<string | null>(null)
+  const [previewing, setPreviewing] = useState(false)
 
   useEffect(() => {
     listarPlantillasConDetalle().then(setPlantillas).catch(() => {})
@@ -39,17 +41,19 @@ export function CreateOrJoinServerScreen() {
 
   const plantillaSeleccionada = plantillas.find((p) => p.id === plantillaId) ?? null
 
-  async function handleSubmit() {
+  async function handleSubmit(nombreFinal = nombre.trim()) {
     setError(null)
     setLoading(true)
     try {
       const servidor =
         mode === 'create'
-          ? await crearServidor(nombre.trim(), undefined, plantillaId ?? undefined)
+          ? await crearServidor(nombreFinal, undefined, plantillaId ?? undefined)
           : await unirseAServidor(codigo.trim())
+      setPreviewing(false)
       navigation.replace('ServerChannels', { serverId: servidor.id })
     } catch (err) {
       setError(getErrorMessage(err))
+      setPreviewing(false)
     } finally {
       setLoading(false)
     }
@@ -130,6 +134,18 @@ export function CreateOrJoinServerScreen() {
                 <View style={styles.preview}>
                   <PlantillaPreview plantilla={plantillaSeleccionada} />
                 </View>
+                <Pressable style={styles.previewButton} onPress={() => setPreviewing(true)}>
+                  <Ionicons name="eye-outline" size={16} color={colors.foreground} />
+                  <Text style={styles.previewButtonLabel}>Ver el servidor por dentro</Text>
+                </Pressable>
+                <PlantillaServidorPreview
+                  visible={previewing}
+                  plantilla={plantillaSeleccionada}
+                  nombreServidor={nombre}
+                  creating={loading}
+                  onClose={() => setPreviewing(false)}
+                  onCreate={() => handleSubmit(nombre.trim() || plantillaSeleccionada.nombre)}
+                />
               </View>
             ) : null}
           </>
@@ -153,7 +169,7 @@ export function CreateOrJoinServerScreen() {
 
         <Pressable
           style={[styles.submitButton, (disabled || loading) && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
+          onPress={() => handleSubmit()}
           disabled={disabled || loading}
         >
           {loading ? (
@@ -239,7 +255,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
   },
-  tplActive: { borderColor: colors.primary, backgroundColor: 'rgba(99,102,241,0.12)' },
+  tplActive: { borderColor: colors.primary, backgroundColor: alfa(colors.primary, 0.12) },
   tplText: { color: colors.foreground, fontSize: fontSize.xs, fontWeight: '600' },
   preview: {
     backgroundColor: colors.card,
@@ -247,6 +263,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
+  },
+  previewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+  },
+  previewButtonLabel: {
+    color: colors.foreground,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
   },
   submitButton: {
     backgroundColor: colors.primary,

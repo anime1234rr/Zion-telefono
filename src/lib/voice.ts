@@ -113,6 +113,15 @@ export async function listarParticipantesDeVoz(canalId: string): Promise<VoicePa
   return (data ?? []).map(mapEstadoVoz).filter((p) => esConexionViva(p.updatedAt))
 }
 
+export async function listarParticipantesDeVozDelServidor(servidorId: string): Promise<VoiceParticipant[]> {
+  const { data, error } = await supabase
+    .rpc('listar_participantes_de_voz_del_servidor', { p_servidor_id: servidorId })
+    .select(ESTADO_VOZ_SELECT)
+
+  if (error) throw error
+  return ((data ?? []) as EstadoVozRow[]).map(mapEstadoVoz).filter((p) => esConexionViva(p.updatedAt))
+}
+
 export async function listarParticipantesDeVozDeCanales(
   canalIds: string[]
 ): Promise<VoiceParticipant[]> {

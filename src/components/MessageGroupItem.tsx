@@ -5,7 +5,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { Avatar } from '@/components/Avatar'
 import { MessageContent } from '@/components/MessageContent'
-import { colors } from '@/theme/colors'
+import { UserBadge } from '@/components/UserBadge'
+import { VoiceMessagePlayer } from '@/components/VoiceMessagePlayer'
+import { MessageEmbedCard } from '@/components/MessageEmbedCard'
+import { alfa, colors } from '@/theme/colors'
 import { fontSize, radius, spacing } from '@/theme/theme'
 import { mensajeMeMenciona } from '@/lib/mentions'
 import type { ChatMessage } from '@/lib/types'
@@ -106,6 +109,10 @@ function MessageItemBody({
         <VideoAttachment uri={message.attachment.url} />
       ) : null}
 
+      {message.attachment?.type === 'audio' ? <VoiceMessagePlayer url={message.attachment.url} /> : null}
+
+      {message.embed ? <MessageEmbedCard embed={message.embed} /> : null}
+
       {message.pinned ? <Text style={styles.pinnedLabel}>📌 Fijado</Text> : null}
 
       <ReactionsRow message={message} onToggleReaction={onToggleReaction} />
@@ -146,6 +153,7 @@ export const MessageGroupItem = memo(function MessageGroupItem({
           <Pressable onPress={() => onPressAuthor?.(group.author.id)} disabled={!onPressAuthor}>
             <Text style={styles.authorName}>{group.author.name}</Text>
           </Pressable>
+          <UserBadge userId={group.author.id} size={13} />
           <Text style={styles.timestamp}>{group.timestamp}</Text>
         </View>
         {group.items.map((message) => {
@@ -210,11 +218,11 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   highlighted: {
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    backgroundColor: alfa(colors.primary, 0.15),
     borderRadius: radius.sm,
   },
   mentionsMe: {
-    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    backgroundColor: alfa(colors.primary, 0.08),
     borderLeftWidth: 2,
     borderLeftColor: colors.primary,
     borderRadius: radius.sm,

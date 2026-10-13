@@ -3,6 +3,7 @@ import { StyleSheet, View, type ViewStyle } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { colors } from '@/theme/colors'
+import { useAppBackground } from '@/lib/app-background'
 
 export function ScreenContainer({
   children,
@@ -13,8 +14,12 @@ export function ScreenContainer({
   style?: ViewStyle
   edges?: ('top' | 'bottom' | 'left' | 'right')[]
 }) {
+  const fondo = useAppBackground()
   return (
-    <SafeAreaView style={[styles.container, style]} edges={edges ?? ['top', 'bottom']}>
+    <SafeAreaView
+      style={[styles.container, fondo ? styles.transparente : null, style]}
+      edges={edges ?? ['top', 'bottom']}
+    >
       <View style={styles.inner}>{children}</View>
     </SafeAreaView>
   )
@@ -27,5 +32,8 @@ const styles = StyleSheet.create({
   },
   inner: {
     flex: 1,
+  },
+  transparente: {
+    backgroundColor: 'transparent',
   },
 })

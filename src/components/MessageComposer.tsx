@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 
 import { StickerPickerModal } from '@/components/StickerPickerModal'
+import { VoiceNoteRecorder } from '@/components/VoiceNoteRecorder'
 import { colors } from '@/theme/colors'
 import { fontSize, radius, spacing } from '@/theme/theme'
 import type { MentionableMember, ServerRole } from '@/lib/members'
@@ -31,6 +32,7 @@ export function MessageComposer({
   onSubmit,
   onPickAttachment,
   onSendSticker,
+  onSendVoice,
   replyingTo,
   onCancelReply,
   sending,
@@ -43,6 +45,7 @@ export function MessageComposer({
   onSubmit: (text: string) => void | Promise<void>
   onPickAttachment?: () => void | Promise<void>
   onSendSticker?: (nombre: string) => void
+  onSendVoice?: (uri: string) => Promise<void>
   replyingTo?: ReplyPreview | null
   onCancelReply?: () => void
   sending?: boolean
@@ -53,6 +56,8 @@ export function MessageComposer({
 }) {
   const [text, setText] = useState('')
   const [stickerOpen, setStickerOpen] = useState(false)
+  const [grabando, setGrabando] = useState(false)
+  const mostrarMicrofono = !!onSendVoice && !text.trim() && !sending
 
   const sugerencias = useMemo<Sugerencia[]>(() => {
     const mMatch = /(?:^|\s)@([a-zA-Z0-9_]{1,32})$/.exec(text)
@@ -129,44 +134,50 @@ export function MessageComposer({
       ) : null}
 
       <View style={styles.row}>
-        {onPickAttachment ? (
+        {!grabando && onPickAttachment ? (
           <Pressable style={styles.iconButton} onPress={onPickAttachment} hitSlop={8}>
             <Ionicons name="add-circle-outline" size={24} color={colors.mutedForeground} />
           </Pressable>
         ) : null}
 
-        <TextInput
-          style={styles.input}
-          value={text}
-          onChangeText={setText}
-          placeholder={placeholder}
-          placeholderTextColor={colors.mutedForeground}
-          selectionColor={colors.primary}
-          cursorColor={colors.primary}
-          textAlignVertical="top"
-          autoCorrect={false}
-          spellCheck={false}
-          underlineColorAndroid="transparent"
-          multiline
-        />
+        {!grabando ? (
+          <TextInput
+            style={styles.input}
+            value={text}
+            onChangeText={setText}
+            placeholder={placeholder}
+            placeholderTextColor={colors.mutedForeground}
+            selectionColor={colors.primary}
+            cursorColor={colors.primary}
+            textAlignVertical="top"
+            autoCorrect={false}
+            spellCheck={false}
+            underlineColorAndroid="transparent"
+            multiline
+          />
+        ) : null}
 
-        {onSendSticker && stickers.length > 0 ? (
+        {!grabando && onSendSticker && stickers.length > 0 ? (
           <Pressable style={styles.iconButton} onPress={() => setStickerOpen(true)} hitSlop={8}>
             <Ionicons name="happy-outline" size={22} color={colors.mutedForeground} />
           </Pressable>
         ) : null}
 
-        <Pressable
-          style={[styles.sendButton, (!text.trim() || sending) && styles.sendButtonDisabled]}
-          onPress={handleSend}
-          disabled={!text.trim() || sending}
-        >
-          {sending ? (
-            <ActivityIndicator size="small" color={colors.primaryForeground} />
-          ) : (
-            <Ionicons name="send" size={16} color={colors.primaryForeground} />
-          )}
-        </Pressable>
+        {mostrarMicrofono || grabando ? (
+          <VoiceNoteRecorder onSend={onSendVoice as (uri: string) => Promise<void>} onRecordingChange={setGrabando} />
+        ) : (
+          <Pressable
+            style={[styles.sendButton, (!text.trim() || sending) && styles.sendButtonDisabled]}
+            onPress={handleSend}
+            disabled={!text.trim() || sending}
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color={colors.primaryForeground} />
+            ) : (
+              <Ionicons name="send" size={16} color={colors.primaryForeground} />
+            )}
+          </Pressable>
+        )}
       </View>
 
       <StickerPickerModal

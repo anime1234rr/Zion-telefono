@@ -1,3 +1,5 @@
+import type { ReporteStaff } from '@/lib/reports'
+
 export type MainTabParamList = {
   Inicio: undefined
   Servidores: undefined
@@ -6,6 +8,7 @@ export type MainTabParamList = {
 
 export type RootStackParamList = {
   Auth: undefined
+  MfaChallenge: undefined
   Main: undefined
   ServerChannels: { serverId: string }
   Channel: { serverId: string; channelId: string; channelName: string; highlightMessageId?: string }
@@ -38,6 +41,20 @@ export type RootStackParamList = {
   InviteAccept: undefined
   ChangeEmail: undefined
   Reauthenticate: { id: number; reason: string }
+  ReportUser: { userId: string; userName: string }
+  StaffPanel: undefined
+  AccountHistory: undefined
+  Help: undefined
+  SavedMessages: undefined
+  AppSettings: undefined
+  NotificationSettings: undefined
+  AppearanceSettings: undefined
+  VoiceVideoSettings: undefined
+  AccessibilitySettings: undefined
+  LanguageSettings: undefined
+  StorageSettings: undefined
+  StaffReport: { reporte: ReporteStaff }
+  StaffUser: { id: string; nombre: string; avatarUrl: string | null }
 }
 
 declare global {
