@@ -57,7 +57,17 @@ function projectId(): string | undefined {
   )
 }
 
-export async function registrarPush(preguntar: boolean): Promise<EstadoPermisoPush> {
+let registrandoEnCurso: Promise<EstadoPermisoPush> | null = null
+
+export function registrarPush(preguntar: boolean): Promise<EstadoPermisoPush> {
+  if (registrandoEnCurso) return registrandoEnCurso
+  registrandoEnCurso = registrarPushInterno(preguntar).finally(() => {
+    registrandoEnCurso = null
+  })
+  return registrandoEnCurso
+}
+
+async function registrarPushInterno(preguntar: boolean): Promise<EstadoPermisoPush> {
   if (!Device.isDevice) return 'no-disponible'
   await crearCanalesAndroid()
 
@@ -69,6 +79,9 @@ export async function registrarPush(preguntar: boolean): Promise<EstadoPermisoPu
   if (estado !== 'concedido') return estado
 
   const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId: projectId() })
+  const tokenGuardado = await leerJSON<string | null>(CLAVE_TOKEN, null)
+  if (token === tokenGuardado) return 'concedido'
+
   const { error } = await supabase.rpc('registrar_push_token', {
     p_token: token,
     p_plataforma: Platform.OS === 'ios' ? 'ios' : 'android',
