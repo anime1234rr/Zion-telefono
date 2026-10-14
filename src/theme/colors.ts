@@ -54,6 +54,24 @@ const CLARO: typeof OSCURO = {
   offline: '#9ca3af',
 }
 
+const OSCURO_ALTO_CONTRASTE: typeof OSCURO = {
+  ...OSCURO,
+  foreground: '#ffffff',
+  mutedForeground: '#d1d5db',
+  border: 'rgba(255, 255, 255, 0.32)',
+  secondaryForeground: '#ffffff',
+  accentForeground: '#ffffff',
+}
+
+const CLARO_ALTO_CONTRASTE: typeof OSCURO = {
+  ...CLARO,
+  foreground: '#000000',
+  mutedForeground: '#374151',
+  border: 'rgba(17, 24, 39, 0.4)',
+  secondaryForeground: '#000000',
+  accentForeground: '#000000',
+}
+
 export const colors = { ...OSCURO }
 
 export type ColorKey = keyof typeof colors
@@ -71,8 +89,15 @@ export const ACENTOS: { id: string; label: string; color: string }[] = [
 
 export const tema = { claro: false }
 
-export function aplicarPaleta(claro: boolean, acento: string): void {
-  Object.assign(colors, claro ? CLARO : OSCURO, { primary: acento, ring: acento })
+export function aplicarPaleta(claro: boolean, acento: string, altoContraste = false): void {
+  const base = claro
+    ? altoContraste
+      ? CLARO_ALTO_CONTRASTE
+      : CLARO
+    : altoContraste
+      ? OSCURO_ALTO_CONTRASTE
+      : OSCURO
+  Object.assign(colors, base, { primary: acento, ring: acento })
   tema.claro = claro
 }
 

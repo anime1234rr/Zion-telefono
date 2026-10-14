@@ -33,6 +33,11 @@ export async function obtenerResumenPlataforma(): Promise<ResumenPlataforma | nu
   }
 }
 
+export interface EtiquetaServidorStaff {
+  id: string
+  nombre: string
+}
+
 export interface ServidorStaff {
   id: string
   nombre: string
@@ -46,6 +51,7 @@ export interface ServidorStaff {
   listadoPorNombre: string | null
   listadoAt: string | null
   creadoAt: string
+  etiquetas: EtiquetaServidorStaff[]
 }
 
 interface ServidorStaffRow {
@@ -61,6 +67,7 @@ interface ServidorStaffRow {
   listado_por_nombre: string | null
   listado_at: string | null
   creado_at: string
+  etiquetas: EtiquetaServidorStaff[] | null
 }
 
 export async function staffListarServidores(query: string): Promise<ServidorStaff[]> {
@@ -82,6 +89,7 @@ export async function staffListarServidores(query: string): Promise<ServidorStaf
     listadoPorNombre: row.listado_por_nombre,
     listadoAt: row.listado_at,
     creadoAt: row.creado_at,
+    etiquetas: row.etiquetas ?? [],
   }))
 }
 
@@ -89,6 +97,14 @@ export async function staffCambiarListadoServidor(servidorId: string, listado: b
   const { error } = await supabase.rpc('staff_cambiar_listado_servidor', {
     p_servidor_id: servidorId,
     p_listado: listado,
+  })
+  if (error) throw error
+}
+
+export async function staffQuitarEtiquetaServidor(servidorId: string, etiquetaId: string): Promise<void> {
+  const { error } = await supabase.rpc('staff_quitar_etiqueta_servidor', {
+    p_servidor_id: servidorId,
+    p_etiqueta_id: etiquetaId,
   })
   if (error) throw error
 }

@@ -7,6 +7,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import { Avatar } from '@/components/Avatar'
 import { ScreenContainer } from '@/components/ScreenContainer'
+import { useAppSettings } from '@/lib/app-settings'
 import { formatFullDate } from '@/lib/internal/core-utils'
 import { suscribirseAlPanelStaff } from '@/lib/realtime-avisos'
 import {
@@ -39,6 +40,7 @@ const OPCIONES_SANCION: OpcionSancion[] = [
 export function StaffReportScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
   const { params } = useRoute<RouteProp<RootStackParamList, 'StaffReport'>>()
+  const { subrayarEnlaces } = useAppSettings()
   const [reporte, setReporte] = useState<ReporteStaff>(params.reporte)
   const [evidencias, setEvidencias] = useState<EvidenciaStaff[] | null>(null)
   const [evidenciaError, setEvidenciaError] = useState<string | null>(null)
@@ -187,7 +189,9 @@ export function StaffReportScreen() {
                 </Pressable>
               ) : (
                 <Pressable onPress={() => Linking.openURL(e.adjuntoUrl as string)}>
-                  <Text style={styles.enlace}>📎 Ver adjunto{e.adjuntoTipo ? ` (${e.adjuntoTipo})` : ''}</Text>
+                  <Text style={[styles.enlace, subrayarEnlaces && styles.enlaceSubrayado]}>
+                    📎 Ver adjunto{e.adjuntoTipo ? ` (${e.adjuntoTipo})` : ''}
+                  </Text>
                 </Pressable>
               )
             ) : null}
@@ -295,6 +299,7 @@ const styles = StyleSheet.create({
   resolucion: { backgroundColor: colors.secondary, borderRadius: radius.sm, padding: spacing.sm, marginTop: 4 },
   adjunto: { width: '100%', height: 200, borderRadius: radius.sm, marginTop: 4 },
   enlace: { color: colors.primary, fontSize: fontSize.sm, marginTop: 4 },
+  enlaceSubrayado: { textDecorationLine: 'underline' },
   decision: { gap: spacing.sm, borderColor: conAlfa(colors.primary, 0.4) },
   opciones: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   area: { minHeight: 90 },

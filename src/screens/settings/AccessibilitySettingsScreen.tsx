@@ -17,6 +17,26 @@ export function AccessibilitySettingsScreen() {
           onChange={(v) => setAppSetting('reduceMotion', v)}
         />
       </Grupo>
+      <Grupo titulo="Visión">
+        <FilaInterruptor
+          titulo="Alto contraste"
+          descripcion="Refuerza los bordes y los textos secundarios para que se distingan mejor."
+          valor={pref.altoContraste}
+          onChange={(v) => cambiar('altoContraste', v)}
+        />
+        <FilaInterruptor
+          titulo="Subrayar enlaces"
+          descripcion="Marca con subrayado los textos que abren un enlace."
+          valor={ajustes.subrayarEnlaces}
+          onChange={(v) => setAppSetting('subrayarEnlaces', v)}
+        />
+        <FilaInterruptor
+          titulo="Indicadores de estado con forma"
+          descripcion="Además del color, usa formas distintas para conectado, ausente, no molestar y desconectado."
+          valor={ajustes.indicadoresConForma}
+          onChange={(v) => setAppSetting('indicadoresConForma', v)}
+        />
+      </Grupo>
       <Grupo titulo="Tamaño del texto">
         <Segmentado
           opciones={[

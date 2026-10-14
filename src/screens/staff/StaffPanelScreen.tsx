@@ -32,6 +32,7 @@ import {
   obtenerResumenPlataforma,
   staffCambiarListadoServidor,
   staffListarServidores,
+  staffQuitarEtiquetaServidor,
   type ResumenPlataforma,
   type ServidorStaff,
 } from '@/lib/staff-platform'
@@ -446,6 +447,24 @@ function ServidoresTab({ refresco }: { refresco: number }) {
     }
   }
 
+  async function quitarEtiqueta(servidor: ServidorStaff, etiquetaId: string) {
+    setBusyId(servidor.id)
+    setError(null)
+    try {
+      await staffQuitarEtiquetaServidor(servidor.id, etiquetaId)
+      setServidores(
+        (prev) =>
+          prev?.map((s) =>
+            s.id === servidor.id ? { ...s, etiquetas: s.etiquetas.filter((e) => e.id !== etiquetaId) } : s
+          ) ?? prev
+      )
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   const visibles = (servidores ?? []).filter((s) => {
     const enExplorar = s.comunidadActiva || s.listadoPorStaff
     if (filtro === 'explorar') return enExplorar
@@ -502,6 +521,21 @@ function ServidoresTab({ refresco }: { refresco: number }) {
                   {item.listadoPorStaff ? <Etiqueta texto="Destacado" color={colors.primary} /> : null}
                   {item.comunidadActiva ? <Etiqueta texto="Comunidad" color={colors.online} /> : null}
                 </View>
+                {item.etiquetas.length > 0 ? (
+                  <View style={[styles.filaChica, { marginTop: 4 }]}>
+                    {item.etiquetas.map((et) => (
+                      <Pressable
+                        key={et.id}
+                        style={styles.etiquetaRemovible}
+                        disabled={busyId === item.id}
+                        onPress={() => quitarEtiqueta(item, et.id)}
+                      >
+                        <Text style={styles.etiquetaRemovibleTexto}>{et.nombre}</Text>
+                        <Ionicons name="close" size={11} color={colors.mutedForeground} />
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
               </View>
             </View>
             <Pressable
@@ -562,6 +596,17 @@ const styles = StyleSheet.create({
   lista: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl },
   margen: { marginHorizontal: spacing.lg, marginBottom: spacing.sm },
   filaChica: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  etiquetaRemovible: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  etiquetaRemovibleTexto: { color: colors.mutedForeground, fontSize: 11 },
   encoger: { flexShrink: 1 },
   derecha: { alignItems: 'flex-end', gap: 4 },
   chipCompacto: { flexDirection: 'row', marginTop: 4 },

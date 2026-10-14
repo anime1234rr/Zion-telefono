@@ -13,6 +13,7 @@ export interface CommunityListing {
   memberCount: number
   isMember: boolean
   featured: boolean
+  tags: string[]
 }
 
 interface ExplorarComunidadesRow {
@@ -25,6 +26,7 @@ interface ExplorarComunidadesRow {
   cantidad_miembros: number | string
   ya_soy_miembro: boolean
   destacado_por_staff: boolean | null
+  etiquetas: string[] | null
 }
 
 function mapRow(row: ExplorarComunidadesRow): CommunityListing {
@@ -38,21 +40,86 @@ function mapRow(row: ExplorarComunidadesRow): CommunityListing {
     memberCount: Number(row.cantidad_miembros ?? 0),
     isMember: row.ya_soy_miembro === true,
     featured: row.destacado_por_staff === true,
+    tags: row.etiquetas ?? [],
   }
 }
 
 export async function explorarComunidades(
   query: string,
-  opciones: { limite?: number; offset?: number } = {}
+  opciones: { etiqueta?: string | null; limite?: number; offset?: number } = {}
 ): Promise<CommunityListing[]> {
   const { data, error } = await supabase.rpc('explorar_comunidades', {
     p_query: query.trim() || null,
+    p_etiqueta: opciones.etiqueta?.trim() || null,
     p_limite: opciones.limite ?? 40,
     p_offset: opciones.offset ?? 0,
   })
 
   if (error) throw error
   return ((data ?? []) as ExplorarComunidadesRow[]).map(mapRow)
+}
+
+export type PeriodoDestacado = 'dia' | 'semana' | 'mes' | 'anio'
+
+export async function explorarComunidadesDestacadas(
+  periodo: PeriodoDestacado,
+  limite = 10
+): Promise<CommunityListing[]> {
+  const { data, error } = await supabase.rpc('explorar_comunidades_destacadas', {
+    p_periodo: periodo,
+    p_limite: limite,
+  })
+
+  if (error) throw error
+  return ((data ?? []) as ExplorarComunidadesRow[]).map(mapRow)
+}
+
+export interface EtiquetaPopular {
+  id: string
+  nombre: string
+  cantidadServidores: number
+}
+
+export async function listarEtiquetasPopulares(limite = 30): Promise<EtiquetaPopular[]> {
+  const { data, error } = await supabase.rpc('listar_etiquetas_populares', { p_limite: limite })
+  if (error) throw error
+  return ((data ?? []) as { id: string; nombre: string; cantidad_servidores: number | string }[]).map(
+    (row) => ({
+      id: row.id,
+      nombre: row.nombre,
+      cantidadServidores: Number(row.cantidad_servidores ?? 0),
+    })
+  )
+}
+
+export async function asignarEtiquetaServidor(servidorId: string, nombre: string): Promise<void> {
+  const { error } = await supabase.rpc('asignar_etiqueta_servidor', {
+    p_servidor_id: servidorId,
+    p_nombre: nombre,
+  })
+  if (error) throw error
+}
+
+export async function quitarEtiquetaServidor(servidorId: string, etiquetaId: string): Promise<void> {
+  const { error } = await supabase.rpc('quitar_etiqueta_servidor', {
+    p_servidor_id: servidorId,
+    p_etiqueta_id: etiquetaId,
+  })
+  if (error) throw error
+}
+
+export async function listarEtiquetasDeServidor(servidorId: string): Promise<EtiquetaPopular[]> {
+  const { data, error } = await supabase
+    .from('etiquetas_servidor')
+    .select('etiquetas(id, nombre)')
+    .eq('servidor_id', servidorId)
+    .returns<{ etiquetas: { id: string; nombre: string } | null }[]>()
+
+  if (error) throw error
+  return (data ?? [])
+    .map((row) => row.etiquetas)
+    .filter((e): e is { id: string; nombre: string } => e !== null)
+    .map((e) => ({ id: e.id, nombre: e.nombre, cantidadServidores: 0 }))
 }
 
 export interface PersonaConocida {

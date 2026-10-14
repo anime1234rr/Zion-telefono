@@ -16,6 +16,7 @@ export interface PreferenciasApariencia {
   densidad: Densidad
   esquinas: Esquinas
   fuente: TamanoFuente
+  altoContraste: boolean
 }
 
 const CLAVE = 'zion:apariencia'
@@ -26,6 +27,7 @@ export const APARIENCIA_POR_DEFECTO: PreferenciasApariencia = {
   densidad: 'normal',
   esquinas: 'normal',
   fuente: 'normal',
+  altoContraste: false,
 }
 
 const FACTOR_DENSIDAD: Record<Densidad, number> = { compacta: 0.8, normal: 1, comoda: 1.2 }
@@ -51,7 +53,7 @@ export function esClaro(pref: PreferenciasApariencia): boolean {
 
 export function aplicarApariencia(pref: PreferenciasApariencia): void {
   actual = pref
-  aplicarPaleta(esClaro(pref), pref.acento)
+  aplicarPaleta(esClaro(pref), pref.acento, pref.altoContraste)
   aplicarEscalas(FACTOR_FUENTE[pref.fuente], FACTOR_DENSIDAD[pref.densidad], FACTOR_ESQUINAS[pref.esquinas])
 }
 

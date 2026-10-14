@@ -124,6 +124,6 @@ export async function enviarNotificacionDePrueba(): Promise<void> {
       body: 'Así te van a llegar las menciones y los mensajes de Zion.',
       sound: 'default',
     },
-    trigger: Platform.OS === 'android' ? { channelId: 'general', seconds: 1, type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL } : null,
+    trigger: Platform.OS === 'android' ? { channelId: 'general' } : null,
   })
 }

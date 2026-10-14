@@ -14,11 +14,20 @@ import {
   listarServidores,
 } from '@/lib/servers'
 import { listarMiembros } from '@/lib/members'
+import {
+  asignarEtiquetaServidor,
+  listarEtiquetasDeServidor,
+  listarEtiquetasPopulares,
+  quitarEtiquetaServidor,
+  type EtiquetaPopular,
+} from '@/lib/explore'
 import { getErrorMessage } from '@/lib/utils'
 import type { ServerItem } from '@/lib/types'
 import type { RootStackParamList } from '@/navigation/types'
 import { colors } from '@/theme/colors'
 import { fontSize, radius, spacing } from '@/theme/theme'
+
+const MAX_ETIQUETAS = 5
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ServerCommunity'>
 
@@ -35,6 +44,10 @@ export function ServerCommunityScreen() {
   const [memberCount, setMemberCount] = useState<number | null>(null)
   const [descripcion, setDescripcion] = useState('')
   const [busy, setBusy] = useState(false)
+  const [etiquetas, setEtiquetas] = useState<EtiquetaPopular[]>([])
+  const [etiquetasSugeridas, setEtiquetasSugeridas] = useState<EtiquetaPopular[]>([])
+  const [nuevaEtiqueta, setNuevaEtiqueta] = useState('')
+  const [guardandoEtiqueta, setGuardandoEtiqueta] = useState(false)
 
   const isOwner = !!(server && user && server.ownerId === user.id)
 
@@ -46,6 +59,9 @@ export function ServerCommunityScreen() {
         setDescripcion(s?.description ?? '')
       })
       .catch(() => {})
+    listarEtiquetasDeServidor(serverId)
+      .then(setEtiquetas)
+      .catch(() => {})
   }, [serverId])
 
   useFocusEffect(useCallback(() => cargar(), [cargar]))
@@ -55,6 +71,40 @@ export function ServerCommunityScreen() {
       .then((m) => setMemberCount(m.length))
       .catch(() => setMemberCount(0))
   }, [serverId])
+
+  useEffect(() => {
+    listarEtiquetasPopulares(20)
+      .then(setEtiquetasSugeridas)
+      .catch(() => {})
+  }, [])
+
+  async function handleAgregarEtiqueta(nombre: string) {
+    const limpio = nombre.trim()
+    if (!limpio || etiquetas.length >= MAX_ETIQUETAS) return
+    setGuardandoEtiqueta(true)
+    try {
+      await asignarEtiquetaServidor(serverId, limpio)
+      const actuales = await listarEtiquetasDeServidor(serverId)
+      setEtiquetas(actuales)
+      setNuevaEtiqueta('')
+    } catch (err) {
+      showAppAlert('Error', getErrorMessage(err))
+    } finally {
+      setGuardandoEtiqueta(false)
+    }
+  }
+
+  async function handleQuitarEtiqueta(etiquetaId: string) {
+    setGuardandoEtiqueta(true)
+    try {
+      await quitarEtiquetaServidor(serverId, etiquetaId)
+      setEtiquetas((prev) => prev.filter((e) => e.id !== etiquetaId))
+    } catch (err) {
+      showAppAlert('Error', getErrorMessage(err))
+    } finally {
+      setGuardandoEtiqueta(false)
+    }
+  }
 
   const requisitos = [
     {
@@ -151,6 +201,73 @@ export function ServerCommunityScreen() {
                 <Text style={styles.btnText}>Guardar</Text>
               </Pressable>
             </View>
+          </View>
+        ) : null}
+
+        {server?.communityEnabled && isOwner ? (
+          <View style={[styles.block, styles.gap]}>
+            <Text style={styles.blockLabel}>
+              ETIQUETAS ({etiquetas.length}/{MAX_ETIQUETAS})
+            </Text>
+            <Text style={styles.statusDesc}>
+              Ayudan a que te encuentren en Explorar. Elegí una existente o escribí una nueva.
+            </Text>
+
+            {etiquetas.length > 0 ? (
+              <View style={styles.chipsRow}>
+                {etiquetas.map((e) => (
+                  <Pressable
+                    key={e.id}
+                    style={styles.chip}
+                    onPress={() => handleQuitarEtiqueta(e.id)}
+                    disabled={guardandoEtiqueta}
+                  >
+                    <Text style={styles.chipText}>{e.nombre}</Text>
+                    <Ionicons name="close" size={12} color={colors.mutedForeground} />
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+
+            {etiquetas.length < MAX_ETIQUETAS ? (
+              <>
+                <View style={styles.addEtiquetaRow}>
+                  <TextInput
+                    style={[styles.input, styles.addEtiquetaInput]}
+                    placeholder="Nueva etiqueta"
+                    placeholderTextColor={colors.mutedForeground}
+                    value={nuevaEtiqueta}
+                    onChangeText={setNuevaEtiqueta}
+                    maxLength={30}
+                  />
+                  <Pressable
+                    style={[styles.btn, (!nuevaEtiqueta.trim() || guardandoEtiqueta) && styles.btnDisabled]}
+                    onPress={() => handleAgregarEtiqueta(nuevaEtiqueta)}
+                    disabled={!nuevaEtiqueta.trim() || guardandoEtiqueta}
+                  >
+                    <Text style={styles.btnText}>Agregar</Text>
+                  </Pressable>
+                </View>
+
+                {etiquetasSugeridas.filter((s) => !etiquetas.some((e) => e.id === s.id)).length > 0 ? (
+                  <View style={styles.chipsRow}>
+                    {etiquetasSugeridas
+                      .filter((s) => !etiquetas.some((e) => e.id === s.id))
+                      .slice(0, 12)
+                      .map((s) => (
+                        <Pressable
+                          key={s.id}
+                          style={styles.chipSuggestion}
+                          onPress={() => handleAgregarEtiqueta(s.nombre)}
+                          disabled={guardandoEtiqueta}
+                        >
+                          <Text style={styles.chipSuggestionText}>{s.nombre}</Text>
+                        </Pressable>
+                      ))}
+                  </View>
+                ) : null}
+              </>
+            ) : null}
           </View>
         ) : null}
 
@@ -256,4 +373,33 @@ const styles = StyleSheet.create({
   toggleBtnText: { color: colors.primaryForeground, fontSize: fontSize.md, fontWeight: '700' },
   toggleBtnTextOff: { color: colors.destructive },
   note: { color: colors.mutedForeground, fontSize: fontSize.sm, marginTop: spacing.lg },
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.secondary,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  chipText: { color: colors.foreground, fontSize: fontSize.xs, fontWeight: '600' },
+  chipSuggestion: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  chipSuggestionText: { color: colors.mutedForeground, fontSize: fontSize.xs },
+  addEtiquetaRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    alignItems: 'center',
+  },
+  addEtiquetaInput: { flex: 1 },
 })

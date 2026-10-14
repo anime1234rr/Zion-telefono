@@ -7,6 +7,8 @@ export interface AppSettings {
   noiseSuppression: boolean
   autoGainControl: boolean
   reduceMotion: boolean
+  subrayarEnlaces: boolean
+  indicadoresConForma: boolean
 }
 
 const CLAVE = 'zion:app-settings'
@@ -16,6 +18,8 @@ const DEFAULTS: AppSettings = {
   noiseSuppression: true,
   autoGainControl: true,
   reduceMotion: false,
+  subrayarEnlaces: false,
+  indicadoresConForma: false,
 }
 
 let ajustes: AppSettings = DEFAULTS

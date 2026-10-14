@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -17,48 +17,26 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { ScreenContainer } from '@/components/ScreenContainer'
 import { PersonasExplorar } from '@/components/PersonasExplorar'
 import { showAppAlert } from '@/hooks/use-app-alert'
-import { explorarComunidades, type CommunityListing } from '@/lib/explore'
+import {
+  explorarComunidades,
+  explorarComunidadesDestacadas,
+  listarEtiquetasPopulares,
+  type CommunityListing,
+  type EtiquetaPopular,
+  type PeriodoDestacado,
+} from '@/lib/explore'
 import { unirseAServidor } from '@/lib/servers'
 import { suscribirseAExplorar } from '@/lib/realtime-avisos'
 import type { RootStackParamList } from '@/navigation/types'
 import { alfa, colors } from '@/theme/colors'
 import { fontSize, radius, spacing } from '@/theme/theme'
 
-const CATEGORIAS: { id: string; label: string; palabras: string[] }[] = [
-  { id: 'todos', label: 'Todos', palabras: [] },
-  { id: 'anime', label: 'Anime', palabras: ['anime', 'manga', 'otaku', 'waifu', 'weeb', 'cosplay'] },
-  {
-    id: 'gaming',
-    label: 'Gaming',
-    palabras: ['gaming', 'gamer', 'juego', 'videojuego', 'game', 'esport', 'fps', 'rpg', 'minecraft', 'valorant', 'league', 'fortnite', 'roblox', 'steam'],
-  },
-  {
-    id: 'tecnologia',
-    label: 'Tecnología',
-    palabras: ['tech', 'tecnolog', 'program', 'desarroll', 'codigo', 'code', 'software', 'hardware', 'linux', 'javascript', 'python', 'inteligencia artificial', 'devops'],
-  },
-  {
-    id: 'musica',
-    label: 'Música',
-    palabras: ['music', 'musica', 'beat', 'productor', 'rap', 'rock', 'pop', 'trap', 'dj', 'banda'],
-  },
-  { id: 'arte', label: 'Arte', palabras: ['arte', 'art', 'dibujo', 'draw', 'ilustra', 'diseno', 'design', 'pixel', 'nft'] },
-  { id: 'social', label: 'Social', palabras: ['comunidad', 'amigos', 'chat', 'social', 'hangout', 'charla', 'conocer'] },
+const PERIODOS: { value: PeriodoDestacado; label: string }[] = [
+  { value: 'dia', label: 'Día' },
+  { value: 'semana', label: 'Semana' },
+  { value: 'mes', label: 'Mensual' },
+  { value: 'anio', label: 'Anual' },
 ]
-
-function normalizar(texto: string): string {
-  return texto
-    .normalize('NFD')
-    .replace(new RegExp('[\\u0300-\\u036f]', 'g'), '')
-    .toLowerCase()
-}
-
-function coincideCategoria(comunidad: CommunityListing, categoriaId: string): boolean {
-  const cat = CATEGORIAS.find((c) => c.id === categoriaId)
-  if (!cat || cat.palabras.length === 0) return true
-  const heno = normalizar(`${comunidad.name} ${comunidad.description ?? ''}`)
-  return cat.palabras.some((palabra) => heno.includes(normalizar(palabra)))
-}
 
 function iniciales(nombre: string): string {
   return nombre
@@ -151,21 +129,47 @@ export function ExploreScreen() {
   const [modo, setModo] = useState<'servidores' | 'personas'>('servidores')
   const [query, setQuery] = useState('')
   const [queryPersonas, setQueryPersonas] = useState('')
-  const [categoria, setCategoria] = useState('todos')
+  const [etiquetaSeleccionada, setEtiquetaSeleccionada] = useState<string | null>(null)
+  const [etiquetasDisponibles, setEtiquetasDisponibles] = useState<EtiquetaPopular[]>([])
   const [comunidades, setComunidades] = useState<CommunityListing[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(false)
   const [uniendo, setUniendo] = useState<string | null>(null)
+  const [periodoDestacado, setPeriodoDestacado] = useState<PeriodoDestacado>('dia')
+  const [destacados, setDestacados] = useState<CommunityListing[]>([])
   const queryRef = useRef(query)
+  const etiquetaRef = useRef(etiquetaSeleccionada)
 
   useEffect(() => {
     queryRef.current = query
   }, [query])
 
+  useEffect(() => {
+    etiquetaRef.current = etiquetaSeleccionada
+  }, [etiquetaSeleccionada])
+
+  useEffect(() => {
+    listarEtiquetasPopulares(20)
+      .then(setEtiquetasDisponibles)
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    let cancelado = false
+    explorarComunidadesDestacadas(periodoDestacado, 10)
+      .then((data) => {
+        if (!cancelado) setDestacados(data)
+      })
+      .catch(() => {})
+    return () => {
+      cancelado = true
+    }
+  }, [periodoDestacado])
+
   useEffect(
     () =>
       suscribirseAExplorar(() => {
-        explorarComunidades(queryRef.current)
+        explorarComunidades(queryRef.current, { etiqueta: etiquetaRef.current })
           .then(setComunidades)
           .catch(() => {})
       }),
@@ -177,7 +181,7 @@ export function ExploreScreen() {
     const t = setTimeout(() => {
       setCargando(true)
       setError(false)
-      explorarComunidades(query)
+      explorarComunidades(query, { etiqueta: etiquetaSeleccionada })
         .then((data) => {
           if (!cancelado) setComunidades(data)
         })
@@ -192,13 +196,10 @@ export function ExploreScreen() {
       cancelado = true
       clearTimeout(t)
     }
-  }, [query])
+  }, [query, etiquetaSeleccionada])
 
-  const visibles = useMemo(
-    () => comunidades.filter((c) => coincideCategoria(c, categoria)),
-    [comunidades, categoria]
-  )
-  const hayFiltros = query.trim() !== '' || categoria !== 'todos'
+  const visibles = comunidades
+  const hayFiltros = query.trim() !== '' || etiquetaSeleccionada !== null
 
   async function handleAccion(comunidad: CommunityListing) {
     if (comunidad.isMember) {
@@ -269,20 +270,67 @@ export function ExploreScreen() {
         <PersonasExplorar query={queryPersonas} />
       ) : (
         <>
+          <View style={styles.destacadoHeader}>
+            <Ionicons name="trending-up-outline" size={14} color={colors.primary} />
+            <Text style={styles.destacadoTitle}>Destacado</Text>
+          </View>
+          <View style={styles.periodoRow}>
+            {PERIODOS.map((p) => (
+              <Pressable
+                key={p.value}
+                style={[styles.periodoChip, periodoDestacado === p.value && styles.chipActive]}
+                onPress={() => setPeriodoDestacado(p.value)}
+              >
+                <Text style={[styles.chipText, periodoDestacado === p.value && styles.chipTextActive]}>
+                  {p.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {destacados.length > 0 ? (
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={destacados}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.destacadoList}
+              renderItem={({ item }) => (
+                <View style={styles.destacadoCardWrap}>
+                  <CommunityCard
+                    community={item}
+                    joining={uniendo === item.id}
+                    onAction={() => handleAccion(item)}
+                  />
+                </View>
+              )}
+            />
+          ) : null}
+
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.chipScroll}
             contentContainerStyle={styles.chipRow}
           >
-            {CATEGORIAS.map((cat) => (
+            <Pressable
+              style={[styles.chip, etiquetaSeleccionada === null && styles.chipActive]}
+              onPress={() => setEtiquetaSeleccionada(null)}
+            >
+              <Text style={[styles.chipText, etiquetaSeleccionada === null && styles.chipTextActive]}>
+                Todos
+              </Text>
+            </Pressable>
+            {etiquetasDisponibles.map((et) => (
               <Pressable
-                key={cat.id}
-                style={[styles.chip, categoria === cat.id && styles.chipActive]}
-                onPress={() => setCategoria(cat.id)}
+                key={et.id}
+                style={[styles.chip, etiquetaSeleccionada === et.nombre && styles.chipActive]}
+                onPress={() => setEtiquetaSeleccionada(et.nombre)}
               >
-                <Text style={[styles.chipText, categoria === cat.id && styles.chipTextActive]}>
-                  {cat.label}
+                <Text
+                  style={[styles.chipText, etiquetaSeleccionada === et.nombre && styles.chipTextActive]}
+                >
+                  {et.nombre}
                 </Text>
               </Pressable>
             ))}
@@ -315,7 +363,7 @@ export function ExploreScreen() {
                   style={styles.clearBtn}
                   onPress={() => {
                     setQuery('')
-                    setCategoria('todos')
+                    setEtiquetaSeleccionada(null)
                   }}
                 >
                   <Text style={styles.clearBtnText}>Limpiar filtros</Text>
@@ -406,6 +454,39 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: fontSize.md,
     padding: 0,
+  },
+  destacadoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xs,
+  },
+  destacadoTitle: {
+    color: colors.foreground,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+  },
+  periodoRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  periodoChip: {
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+  },
+  destacadoList: {
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  destacadoCardWrap: {
+    width: 220,
   },
   chipScroll: {
     flexGrow: 0,

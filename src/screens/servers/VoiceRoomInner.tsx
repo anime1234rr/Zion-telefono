@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
@@ -5,7 +6,7 @@ import { useNavigation } from '@react-navigation/native'
 import { ScreenContainer } from '@/components/ScreenContainer'
 import { Avatar } from '@/components/Avatar'
 import { useAuth } from '@/hooks/use-auth'
-import { useVoiceSession } from '@/hooks/use-voice-session'
+import { joinVoiceChannel, leaveVoiceChannel, toggleDeafen, toggleMute, useVoiceConnection } from '@/hooks/use-voice-connection'
 import { alfa, colors } from '@/theme/colors'
 import { fontSize, radius, spacing } from '@/theme/theme'
 
@@ -18,8 +19,14 @@ export function VoiceRoomInner({
 }) {
   const navigation = useNavigation()
   const { user } = useAuth()
-  const { participants, muted, deafened, connecting, error, toggleMute, toggleDeafen } =
-    useVoiceSession(channelId, user?.id ?? null)
+  const { participants, muted, deafened, connecting, error, connectedChannelId } = useVoiceConnection()
+
+  useEffect(() => {
+    if (!user?.id) return
+    void joinVoiceChannel(channelId, user.id, channelName)
+  }, [channelId, channelName, user?.id])
+
+  const showConnecting = connecting && connectedChannelId !== channelId
 
   return (
     <ScreenContainer>
@@ -41,7 +48,7 @@ export function VoiceRoomInner({
           <Ionicons name="alert-circle-outline" size={28} color={colors.destructive} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
-      ) : connecting ? (
+      ) : showConnecting ? (
         <View style={styles.center}>
           <ActivityIndicator color={colors.primary} />
           <Text style={styles.hint}>Conectando a la sala…</Text>
@@ -95,7 +102,10 @@ export function VoiceRoomInner({
         </Pressable>
         <Pressable
           style={[styles.controlButton, styles.leaveButton]}
-          onPress={() => navigation.goBack()}
+          onPress={() => {
+            void leaveVoiceChannel()
+            navigation.goBack()
+          }}
         >
           <Ionicons name="call" size={22} color="#ffffff" />
         </Pressable>

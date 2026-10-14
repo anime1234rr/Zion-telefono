@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { Image } from 'expo-image'
 import * as ImagePicker from 'expo-image-picker'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -21,13 +22,14 @@ import { useStaffCaps } from '@/hooks/use-staff-caps'
 import { showAppAlert } from '@/hooks/use-app-alert'
 import {
   actualizarAvatar,
+  actualizarBanner,
   actualizarPerfil,
   estadoPropioAStatus,
   obtenerPerfilEditable,
   type EditableProfile,
 } from '@/lib/profiles'
 import { suscribirseAMiPerfil } from '@/lib/presence'
-import { subirAvatar } from '@/lib/storage'
+import { subirAvatar, subirBanner } from '@/lib/storage'
 import { getErrorMessage } from '@/lib/utils'
 import { APP_VERSION, checkForUpdates } from '@/lib/updates'
 import type { UserStatus } from '@/lib/types'
@@ -42,6 +44,19 @@ const STATUS_OPTIONS: { value: UserStatus; label: string }[] = [
   { value: 'offline', label: 'Invisible' },
 ]
 
+const COLORES_BANNER = [
+  '#6366f1',
+  '#ef4444',
+  '#f97316',
+  '#eab308',
+  '#22c55e',
+  '#06b6d4',
+  '#3b82f6',
+  '#a855f7',
+  '#ec4899',
+  '#9ca3af',
+]
+
 export function ProfileScreen() {
   const { user, signOut } = useAuth()
   const userId = user?.id ?? null
@@ -51,8 +66,10 @@ export function ProfileScreen() {
   const [profile, setProfile] = useState<EditableProfile | null>(null)
   const [nombreCompleto, setNombreCompleto] = useState('')
   const [biografia, setBiografia] = useState('')
+  const [colorBanner, setColorBanner] = useState('#6366f1')
   const [saving, setSaving] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [uploadingBanner, setUploadingBanner] = useState(false)
 
   useFocusEffect(
     useCallback(() => {
@@ -62,6 +79,7 @@ export function ProfileScreen() {
           setProfile(data)
           setNombreCompleto(data.nombreCompleto)
           setBiografia(data.biografia)
+          setColorBanner(data.colorBanner)
         })
         .catch((err) => console.error('No se pudo cargar el perfil', err))
 
@@ -75,7 +93,7 @@ export function ProfileScreen() {
     if (!user) return
     setSaving(true)
     try {
-      const updated = await actualizarPerfil(user.id, { nombreCompleto, biografia })
+      const updated = await actualizarPerfil(user.id, { nombreCompleto, biografia, colorBanner })
       setProfile(updated)
     } catch (err) {
       showAppAlert('Error', getErrorMessage(err))
@@ -122,6 +140,47 @@ export function ProfileScreen() {
     }
   }
 
+  async function handleChangeBanner() {
+    if (!user) return
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsEditing: true,
+      aspect: [3, 1],
+    })
+    if (result.canceled || !result.assets[0]) return
+
+    const asset = result.assets[0]
+    setUploadingBanner(true)
+    try {
+      const url = await subirBanner(user.id, {
+        uri: asset.uri,
+        name: asset.fileName ?? `banner.${asset.uri.split('.').pop()}`,
+        type: asset.mimeType ?? 'image/jpeg',
+        size: asset.fileSize,
+      })
+      await actualizarBanner(user.id, url)
+      setProfile((prev) => (prev ? { ...prev, bannerUrl: url } : prev))
+    } catch (err) {
+      showAppAlert('Error', getErrorMessage(err))
+    } finally {
+      setUploadingBanner(false)
+    }
+  }
+
+  async function handleRemoveBanner() {
+    if (!user) return
+    setUploadingBanner(true)
+    try {
+      await actualizarBanner(user.id, null)
+      setProfile((prev) => (prev ? { ...prev, bannerUrl: undefined } : prev))
+    } catch (err) {
+      showAppAlert('Error', getErrorMessage(err))
+    } finally {
+      setUploadingBanner(false)
+    }
+  }
+
   function handleSignOut() {
     showAppAlert('Cerrar sesión', '¿Seguro que querés cerrar sesión?', [
       { text: 'Cancelar', style: 'cancel' },
@@ -140,18 +199,47 @@ export function ProfileScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.avatarWrapper}>
-          <Pressable onPress={handleChangeAvatar} disabled={uploadingAvatar}>
-            <Avatar name={profile?.nombreUsuario ?? '?'} url={profile?.avatarUrl} size={88} />
-            <View style={styles.avatarEditBadge}>
-              {uploadingAvatar ? (
-                <ActivityIndicator size="small" color={colors.primaryForeground} />
-              ) : (
-                <Ionicons name="camera-outline" size={14} color={colors.primaryForeground} />
-              )}
-            </View>
+        <View style={styles.bannerCard}>
+          <View style={[styles.bannerBg, { backgroundColor: colorBanner }]}>
+            {profile?.bannerUrl ? (
+              <Image source={{ uri: profile.bannerUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+            ) : null}
+            <View style={[StyleSheet.absoluteFill, styles.bannerOverlay]} />
+          </View>
+
+          <Pressable
+            style={styles.bannerEditButton}
+            onPress={handleChangeBanner}
+            disabled={uploadingBanner}
+          >
+            {uploadingBanner ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Ionicons name="image-outline" size={14} color="#ffffff" />
+            )}
+            <Text style={styles.bannerEditLabel}>Cambiar banner</Text>
           </Pressable>
-          <Text style={styles.username}>@{profile?.nombreUsuario}</Text>
+          {profile?.bannerUrl ? (
+            <Pressable style={styles.bannerRemoveButton} onPress={handleRemoveBanner} disabled={uploadingBanner}>
+              <Text style={styles.bannerRemoveLabel}>Quitar banner</Text>
+            </Pressable>
+          ) : null}
+
+          <View style={styles.avatarWrapper}>
+            <Pressable onPress={handleChangeAvatar} disabled={uploadingAvatar}>
+              <View style={styles.avatarRing}>
+                <Avatar name={profile?.nombreUsuario ?? '?'} url={profile?.avatarUrl} size={80} />
+              </View>
+              <View style={styles.avatarEditBadge}>
+                {uploadingAvatar ? (
+                  <ActivityIndicator size="small" color={colors.primaryForeground} />
+                ) : (
+                  <Ionicons name="camera-outline" size={14} color={colors.primaryForeground} />
+                )}
+              </View>
+            </Pressable>
+            <Text style={styles.username}>@{profile?.nombreUsuario}</Text>
+          </View>
         </View>
 
         <View style={styles.field}>
@@ -204,6 +292,37 @@ export function ProfileScreen() {
             spellCheck={false}
             underlineColorAndroid="transparent"
             multiline
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Color de banner</Text>
+          <Text style={styles.bannerColorHint}>
+            Fondo de tu tarjeta de perfil. Si subís una imagen con transparencia, este color queda detrás.
+          </Text>
+          <View style={styles.colorRow}>
+            {COLORES_BANNER.map((c) => (
+              <Pressable
+                key={c}
+                onPress={() => setColorBanner(c)}
+                style={[styles.colorSwatch, { backgroundColor: c }]}
+              >
+                {colorBanner.toLowerCase() === c.toLowerCase() ? (
+                  <Ionicons name="checkmark" size={14} color="#ffffff" />
+                ) : null}
+              </Pressable>
+            ))}
+          </View>
+          <TextInput
+            style={[styles.input, styles.colorInput]}
+            value={colorBanner}
+            onChangeText={setColorBanner}
+            placeholder="#6366f1"
+            placeholderTextColor={colors.mutedForeground}
+            selectionColor={colors.primary}
+            cursorColor={colors.primary}
+            autoCapitalize="none"
+            autoCorrect={false}
           />
         </View>
 
@@ -326,9 +445,55 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     paddingBottom: spacing.xxl,
   },
+  bannerCard: {
+    overflow: 'hidden',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  bannerBg: {
+    height: 110,
+    width: '100%',
+  },
+  bannerOverlay: {
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  bannerEditButton: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  bannerEditLabel: {
+    color: '#ffffff',
+    fontSize: fontSize.xs,
+    fontWeight: '600',
+  },
+  bannerRemoveButton: {
+    position: 'absolute',
+    top: spacing.sm + 28,
+    right: spacing.sm,
+  },
+  bannerRemoveLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: fontSize.xs,
+  },
   avatarWrapper: {
     alignItems: 'center',
     gap: spacing.sm,
+    paddingBottom: spacing.md,
+    marginTop: -40,
+  },
+  avatarRing: {
+    borderRadius: radius.full,
+    borderWidth: 3,
+    borderColor: colors.card,
   },
   avatarEditBadge: {
     position: 'absolute',
@@ -344,8 +509,29 @@ const styles = StyleSheet.create({
     borderColor: colors.background,
   },
   username: {
-    color: colors.mutedForeground,
+    color: colors.foreground,
     fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
+  bannerColorHint: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.xs,
+  },
+  colorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  colorSwatch: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  colorInput: {
+    fontFamily: 'monospace',
+    marginTop: spacing.xs,
   },
   field: {
     gap: spacing.xs,

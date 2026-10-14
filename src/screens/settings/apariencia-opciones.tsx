@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 
-import { showAppAlert } from '@/hooks/use-app-alert'
 import { aparienciaActual, guardarApariencia, type PreferenciasApariencia } from '@/theme/apariencia'
 import { ACENTOS, alfa, colors } from '@/theme/colors'
 import { fontSize, radius, spacing } from '@/theme/theme'
@@ -13,16 +12,8 @@ export function useCambiarApariencia() {
   function cambiar<K extends keyof PreferenciasApariencia>(clave: K, valor: PreferenciasApariencia[K]) {
     if (pref[clave] === valor) return
     const nueva = { ...pref, [clave]: valor }
-    showAppAlert('Aplicar cambio', 'Zion se va a reiniciar unos segundos para aplicar el cambio.', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Aplicar',
-        onPress: () => {
-          setPref(nueva)
-          guardarApariencia(nueva).catch(() => {})
-        },
-      },
-    ])
+    setPref(nueva)
+    guardarApariencia(nueva).catch(() => {})
   }
 
   return { pref, cambiar }

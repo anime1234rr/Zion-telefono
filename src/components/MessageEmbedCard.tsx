@@ -1,17 +1,21 @@
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Image } from 'expo-image'
 
+import { useAppSettings } from '@/lib/app-settings'
 import type { MessageEmbed } from '@/lib/types'
 import { colors } from '@/theme/colors'
 import { fontSize, radius, spacing } from '@/theme/theme'
 
 export function MessageEmbedCard({ embed }: { embed: MessageEmbed }) {
+  const { subrayarEnlaces } = useAppSettings()
   return (
     <View style={[styles.card, embed.color ? { borderLeftColor: embed.color, borderLeftWidth: 4 } : null]}>
       {embed.title ? (
         embed.url ? (
           <Pressable onPress={() => Linking.openURL(embed.url as string)}>
-            <Text style={[styles.titulo, styles.enlace]}>{embed.title}</Text>
+            <Text style={[styles.titulo, styles.enlace, subrayarEnlaces && styles.subrayado]}>
+              {embed.title}
+            </Text>
           </Pressable>
         ) : (
           <Text style={styles.titulo}>{embed.title}</Text>
@@ -49,6 +53,7 @@ const styles = StyleSheet.create({
   },
   titulo: { color: colors.foreground, fontSize: fontSize.sm, fontWeight: '700' },
   enlace: { color: colors.primary },
+  subrayado: { textDecorationLine: 'underline' },
   descripcion: { color: colors.foreground, fontSize: fontSize.sm, lineHeight: 19, opacity: 0.9 },
   campos: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: 4 },
   campo: { width: '47%' },
