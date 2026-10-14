@@ -10,7 +10,6 @@ export function AppSettingsScreen() {
     <SettingsLayout titulo="Configuración de la app">
       <Grupo titulo="Ajustes">
         <FilaAccion icono="notifications-outline" titulo="Notificaciones" onPress={() => navigation.navigate('NotificationSettings')} />
-        <FilaAccion icono="image-outline" titulo="Apariencia" onPress={() => navigation.navigate('AppearanceSettings')} />
         <FilaAccion icono="mic-outline" titulo="Voz y video" onPress={() => navigation.navigate('VoiceVideoSettings')} />
         <FilaAccion icono="accessibility-outline" titulo="Accesibilidad" onPress={() => navigation.navigate('AccessibilitySettings')} />
         <FilaAccion icono="globe-outline" titulo="Idioma y región" onPress={() => navigation.navigate('LanguageSettings')} />

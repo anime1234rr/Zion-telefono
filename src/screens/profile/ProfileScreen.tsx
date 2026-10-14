@@ -333,6 +333,12 @@ export function ProfileScreen() {
             <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
           </Pressable>
 
+          <Pressable style={styles.linkRow} onPress={() => navigation.navigate('AppearanceSettings')}>
+            <Ionicons name="image-outline" size={18} color={colors.mutedForeground} />
+            <Text style={styles.linkRowText}>Apariencia</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+          </Pressable>
+
           <Pressable style={styles.linkRow} onPress={() => navigation.navigate('AppSettings')}>
             <Ionicons name="settings-outline" size={18} color={colors.mutedForeground} />
             <Text style={styles.linkRowText}>Configuración de la app</Text>
