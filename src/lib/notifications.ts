@@ -7,6 +7,7 @@ export type NotificationType =
   | 'sistema'
   | 'mensaje_privado'
   | 'solicitud_amistad'
+  | 'recordatorio'
 
 export interface AppNotification {
   id: string

@@ -1,8 +1,6 @@
 name: Release
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       force:
@@ -23,15 +21,29 @@ jobs:
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
       created: ${{ steps.tag.outputs.created }}
+      sourceSha: ${{ steps.source-sha.outputs.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Checkout del código fuente privado
+        uses: actions/checkout@v4
+        with:
+          repository: anime1234rr/Zion-codigo
+          token: ${{ secrets.ZION_CODIGO_PAT }}
+          path: source
+
+      - name: Registrar el commit del código fuente usado
+        id: source-sha
+        shell: bash
+        working-directory: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Crear y pushear el tag de versión
         id: tag
         shell: bash
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION=$(node -p "require('./source/telefono/package.json').version")
           TAG="mobile-v${VERSION}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           git config user.name "github-actions[bot]"
@@ -69,16 +81,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout
+      - name: Checkout del código fuente privado
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.tag.outputs.tag }}
+          repository: anime1234rr/Zion-codigo
+          token: ${{ secrets.ZION_CODIGO_PAT }}
+          ref: ${{ needs.tag.outputs.sourceSha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: telefono/package-lock.json
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -89,8 +104,8 @@ jobs:
       - name: Cachear node_modules
         uses: actions/cache@v4
         with:
-          path: node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          path: telefono/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('telefono/package-lock.json') }}
           restore-keys: |
             node-modules-${{ runner.os }}-
 
@@ -100,7 +115,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: gradle-${{ runner.os }}-${{ hashFiles('telefono/package-lock.json') }}
           restore-keys: |
             gradle-${{ runner.os }}-
 
@@ -110,14 +125,16 @@ jobs:
           path: |
             ${{ env.ANDROID_SDK_ROOT }}/ndk
             ${{ env.ANDROID_SDK_ROOT }}/cmake
-          key: android-ndk-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: android-ndk-${{ runner.os }}-${{ hashFiles('telefono/package-lock.json') }}
           restore-keys: |
             android-ndk-${{ runner.os }}-
 
       - name: Instalar dependencias
+        working-directory: telefono
         run: npm ci
 
       - name: Sincronizar versión de app.json con package.json
+        working-directory: telefono
         run: |
           node -e "
             const fs = require('fs');
@@ -128,6 +145,7 @@ jobs:
           "
 
       - name: Generar proyecto nativo Android
+        working-directory: telefono
         run: npx expo prebuild -p android --no-install
 
       - name: Configurar memoria de Gradle/Kotlin
@@ -142,7 +160,7 @@ jobs:
           EOF
 
       - name: Compilar APK release
-        working-directory: android
+        working-directory: telefono/android
         run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
@@ -155,8 +173,8 @@ jobs:
         run: |
           TAG="${{ needs.tag.outputs.tag }}"
           APK="Zion-${TAG}.apk"
-          mv android/app/build/outputs/apk/release/app-release.apk "$APK"
-          gh release upload "$TAG" "$APK" --clobber
+          mv telefono/android/app/build/outputs/apk/release/app-release.apk "$APK"
+          gh release upload "$TAG" "$APK" --clobber --repo "${{ github.repository }}"
 
       - name: Publicar la release (sacarla de estado borrador)
         shell: bash
@@ -164,7 +182,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ needs.tag.outputs.tag }}"
-          gh release edit "$TAG" --draft=false
+          gh release edit "$TAG" --draft=false --repo "${{ github.repository }}"
 
       - name: Verificar que la release publicada tenga el APK
         shell: bash
@@ -172,7 +190,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ needs.tag.outputs.tag }}"
-          ASSETS=$(gh release view "$TAG" --json assets -q '[.assets[].name] | join(", ")')
+          ASSETS=$(gh release view "$TAG" --repo "${{ github.repository }}" --json assets -q '[.assets[].name] | join(", ")')
           echo "Assets publicados en $TAG: $ASSETS"
           if ! echo "$ASSETS" | grep -q "\.apk"; then
             echo "::error::La release $TAG no tiene el .apk adjunto. Publicación incompleta, revisar manualmente en GitHub Releases."

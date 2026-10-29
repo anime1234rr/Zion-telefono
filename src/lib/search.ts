@@ -8,6 +8,9 @@ export interface MessageSearchFilters {
   query: string
   autorId?: string | null
   adjuntoTipo?: ChatAttachment['type'] | null
+  canalIdOverride?: string | null
+  desde?: Date | null
+  hasta?: Date | null
 }
 
 export interface MessageSearchResult {
@@ -75,15 +78,17 @@ export async function buscarMensajes(
   filtros: MessageSearchFilters
 ): Promise<MessageSearchResult[]> {
   const termino = filtros.query.trim()
-  if (!termino && !filtros.autorId && !filtros.adjuntoTipo) return []
+  if (!termino && !filtros.autorId && !filtros.adjuntoTipo && !filtros.desde && !filtros.hasta) return []
 
   const { data, error } = await supabase.rpc('buscar_mensajes', {
     p_servidor_id: servidorId,
     p_query: termino || null,
-    p_canal_id: scope.type === 'channel' ? scope.canalId : null,
+    p_canal_id: filtros.canalIdOverride ?? (scope.type === 'channel' ? scope.canalId : null),
     p_autor_id: filtros.autorId ?? null,
     p_adjunto_tipo: filtros.adjuntoTipo ? attachmentTypeToAdjuntoTipo[filtros.adjuntoTipo] : null,
     p_limite: 30,
+    p_desde: filtros.desde?.toISOString() ?? null,
+    p_hasta: filtros.hasta?.toISOString() ?? null,
   })
 
   if (error) throw error

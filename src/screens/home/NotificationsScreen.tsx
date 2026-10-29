@@ -26,6 +26,7 @@ const TYPE_ICON: Record<NotificationType, keyof typeof Ionicons.glyphMap> = {
   sistema: 'settings-outline',
   mensaje_privado: 'chatbubble-outline',
   solicitud_amistad: 'person-add-outline',
+  recordatorio: 'alarm-outline',
 }
 
 export function NotificationsScreen() {
